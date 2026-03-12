@@ -1,3 +1,13 @@
-/.env
-/.zencoder
-/.zenflow
+# environment variables
+.env
+
+# dependencies
+node_modules/
+
+# AI tool folders
+.zencoder/
+.zenflow/
+
+# build files
+.next/
+dist/
