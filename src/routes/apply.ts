@@ -6,7 +6,7 @@ import {
   checkDuplicateSSN,
 } from "../services/applicationService";
 import { trackLeadEvent } from "../services/metaCapi";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -93,7 +93,7 @@ router.post("/", async (req: Request, res: Response) => {
     } catch (dbError) {
       console.error("Database insert failed:", dbError);
       if (process.env.NODE_ENV === "development") {
-        applicationId = uuidv4();
+        applicationId = crypto.randomUUID();
         console.log(`[DEV] Mock application created: ${applicationId}`);
       } else {
         res
