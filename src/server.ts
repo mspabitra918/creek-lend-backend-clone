@@ -55,9 +55,12 @@ app.use(
   }
 );
 
-app.listen(PORT, () => {
-  console.log(`Creek Lend Backend running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-});
+// Only listen when running locally (not on Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Creek Lend Backend running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  });
+}
 
 export default app;
