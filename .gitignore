@@ -32,3 +32,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# environment variables
+.env
+
+# dependencies
+node_modules/
+
+# AI tool folders
+.zencoder/
+.zenflow/
+
+# build files
+.next/
+dist/
