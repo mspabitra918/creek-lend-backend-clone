@@ -170,7 +170,6 @@ export async function getApplicationById(
     [id],
   );
 }
-
 export async function getApplication(
   id: string,
 ): Promise<ApplicationRow | null> {

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { bankVerificationSchema } from "../validation";
 import { createBankVerification } from "../services/bankVerificationService";
 import {
+  getApplicationById,
   getApplication,
   markBankVerificationCompleted,
 } from "../services/applicationService";
@@ -32,16 +33,24 @@ router.post("/", async (req: Request, res: Response) => {
 
     // Verify the application exists and is in bank_verification_pending status
     try {
-      const application = await getApplication(body.applicationId);
+      const application = await getApplicationById(body.applicationId);
+      const existBankApplication = await getApplication(body.applicationId);
       if (!application) {
         res.status(404).json({ error: "Application not found" });
         return;
       }
       if (application) {
-        return res.status(409).json({
-          error: "Application already exists.",
-          application,
+        res.status(400).json({
+          error:
+            "Bank verification has already been submitted for this application.",
         });
+        return;
+      }
+      if (existBankApplication) {
+        res.status(400).json({
+          error: "Application already exists.",
+        });
+        return;
       }
     } catch (dbError) {
       console.error("Failed to verify application:", dbError);
