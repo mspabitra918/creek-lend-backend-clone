@@ -6,6 +6,7 @@ import {
   checkDuplicateSSN,
 } from "../services/applicationService";
 import { trackLeadEvent } from "../services/metaCapi";
+import { sendApplicationConfirmationEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -96,6 +97,17 @@ router.post("/", async (req: Request, res: Response) => {
         .json({ error: "Failed to process application. Please try again." });
       return;
     }
+
+    // Send confirmation email (non-blocking)
+    sendApplicationConfirmationEmail({
+      applicationId,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      email: body.email,
+      loanAmount: body.loanAmount,
+      loanPurpose: body.loanPurpose,
+      loanTerm: body.loanTerm,
+    }).catch((err) => console.error("Email send error:", err));
 
     // Fire Meta CAPI event (non-blocking)
     trackLeadEvent({
