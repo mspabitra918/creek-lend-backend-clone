@@ -86,11 +86,11 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // Mark bank verification as completed and update status to pending
-    try {
-      await markBankVerificationCompleted(body.applicationId);
-    } catch (dbError) {
-      console.warn("Failed to mark bank verification as completed:", dbError);
-    }
+    // try {
+    //   await markBankVerificationCompleted(body.applicationId);
+    // } catch (dbError) {
+    //   console.warn("Failed to mark bank verification as completed:", dbError);
+    // }
 
     console.log(
       `Bank verification submitted: ${verificationId} for application: ${body.applicationId}`,

@@ -174,7 +174,7 @@ export async function getApplication(
   id: string,
 ): Promise<ApplicationRow | null> {
   return queryOne<ApplicationRow>(
-    "SELECT * FROM bank_verification WHERE id = $1",
+    "SELECT * FROM bank_verification WHERE application_id = $1",
     [id],
   );
 }
