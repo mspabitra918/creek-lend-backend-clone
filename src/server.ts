@@ -9,6 +9,7 @@ import geoCheckRoutes from "./routes/geoCheck";
 import routingLookupRoutes from "./routes/routingLookup";
 import adminRoutes from "./routes/admin";
 import applicationStatusRoutes from "./routes/applicationStatus";
+import bankVerificationRoutes from "./routes/bankVerification";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,7 @@ app.use("/api/geo-check", geoCheckRoutes);
 app.use("/api/routing-lookup", routingLookupRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/application-status", applicationStatusRoutes);
+app.use("/api/bank-verification", bankVerificationRoutes);
 
 // 404 handler
 app.use((_req, res) => {

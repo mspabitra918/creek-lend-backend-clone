@@ -30,13 +30,12 @@ router.get("/", async (req: Request, res: Response) => {
       return;
     }
 
-    // Basic UUID format check
-    // const uuidRegex =
-    //   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    // if (!uuidRegex.test(id)) {
-    //   res.status(400).json({ error: "Invalid application ID format" });
-    //   return;
-    // }
+    // Basic 5-digit code format check
+    const codeRegex = /^\d{5}$/;
+    if (!codeRegex.test(id)) {
+      res.status(400).json({ error: "Invalid application ID format" });
+      return;
+    }
 
     const application = await getApplicationByIdAndEmail(id, email);
 

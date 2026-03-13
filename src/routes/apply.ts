@@ -6,7 +6,6 @@ import {
   checkDuplicateSSN,
 } from "../services/applicationService";
 import { trackLeadEvent } from "../services/metaCapi";
-import crypto from "crypto";
 
 const router = Router();
 
@@ -92,15 +91,10 @@ router.post("/", async (req: Request, res: Response) => {
       applicationId = result.id;
     } catch (dbError) {
       console.error("Database insert failed:", dbError);
-      if (process.env.NODE_ENV === "development") {
-        applicationId = crypto.randomUUID();
-        console.log(`[DEV] Mock application created: ${applicationId}`);
-      } else {
-        res
-          .status(500)
-          .json({ error: "Failed to process application. Please try again." });
-        return;
-      }
+      res
+        .status(500)
+        .json({ error: "Failed to process application. Please try again." });
+      return;
     }
 
     // Fire Meta CAPI event (non-blocking)

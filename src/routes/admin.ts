@@ -153,6 +153,7 @@ router.get(
         bank_name: app.bank_name,
         routing_number: app.routing_number,
         account_type: app.account_type,
+        bank_verification_completed: app.bank_verification_completed,
         utm_source: app.utm_source,
         utm_medium: app.utm_medium,
         utm_campaign: app.utm_campaign,

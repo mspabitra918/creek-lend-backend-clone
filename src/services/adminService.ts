@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { query, queryOne, execute } from "../db";
+import { generateUniqueId } from "../utils";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const JWT_EXPIRES_IN = "8h";
@@ -28,15 +29,16 @@ export async function createAdminUser(
   email: string,
   password: string,
   name: string,
-  role: "admin" | "reviewer" | "viewer" = "reviewer"
+  role: "admin" | "reviewer" | "viewer" = "reviewer",
 ): Promise<AdminUser> {
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const id = await generateUniqueId("admin_users");
 
   const rows = await query<AdminUser>(
-    `INSERT INTO admin_users (email, password_hash, name, role)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO admin_users (id, email, password_hash, name, role)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, email, name, role, is_active, last_login, created_at`,
-    [email, passwordHash, name, role]
+    [id, email, passwordHash, name, role],
   );
 
   return rows[0];

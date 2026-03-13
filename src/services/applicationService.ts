@@ -1,6 +1,7 @@
 import { query, queryOne, execute, transaction } from "../db";
 import { encrypt, hashSSN, decrypt } from "../encryption";
 import { sanitizeInput } from "../validation";
+import { generateUniqueId } from "../utils";
 
 export interface CreateApplicationInput {
   firstName: string;
@@ -93,9 +94,11 @@ export async function createApplication(
   const encryptedDL = encrypt(input.driverLicenseNumber);
   const encryptedAccount = encrypt(input.accountNumber);
 
+  const id = await generateUniqueId("loan_applications");
+
   const rows = await query<{ id: string }>(
     `INSERT INTO loan_applications (
-      first_name, last_name, email, phone, date_of_birth,
+      id, first_name, last_name, email, phone, date_of_birth,
       ssn_encrypted, ssn_hash, dl_number_encrypted, dl_state,
       street_address, city, state, zip_code, country,
       employment_status, employer_name, job_title, monthly_income, years_employed,
@@ -105,17 +108,18 @@ export async function createApplication(
       tcpa_consent, privacy_consent, credit_check_consent,
       ip_address, user_agent, lead_id, status
     ) VALUES (
-      $1, $2, $3, $4, $5,
-      $6, $7, $8, $9,
-      $10, $11, $12, $13, $14,
-      $15, $16, $17, $18, $19,
-      $20, $21, $22,
-      $23, $24, $25, $26,
-      $27, $28, $29, $30,
-      $31, $32, $33,
-      $34, $35, $36, 'bank_verification_pending'
+      $1, $2, $3, $4, $5, $6,
+      $7, $8, $9, $10,
+      $11, $12, $13, $14, $15,
+      $16, $17, $18, $19, $20,
+      $21, $22, $23,
+      $24, $25, $26, $27,
+      $28, $29, $30, $31,
+      $32, $33, $34,
+      $35, $36, $37, 'bank_verification_pending'
     ) RETURNING id`,
     [
+      id,
       sanitizeInput(input.firstName),
       sanitizeInput(input.lastName),
       sanitizeInput(input.email),
@@ -274,6 +278,7 @@ export async function updateApplicationStatus(
 ): Promise<boolean> {
   const validStatuses = [
     "bank_verification_pending",
+    "bank_verification_completed",
     "pending",
     "reviewing",
     "approved",
@@ -302,10 +307,13 @@ export async function updateApplicationStatus(
 
     if (rows.length === 0) return false;
 
+    const auditId = await generateUniqueId("audit_log", "id", client);
+
     await client.query(
-      `INSERT INTO audit_log (application_id, action, performed_by, details)
-       VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO audit_log (id, application_id, action, performed_by, details)
+       VALUES ($1, $2, $3, $4, $5)`,
       [
+        auditId,
         id,
         `status_changed_to_${status}`,
         performedBy,
@@ -322,6 +330,7 @@ export async function updateApplicationStatus(
 export async function getApplicationStats(): Promise<{
   total: number;
   bank_verification_pending: number;
+  bank_verification_completed: number;
   pending: number;
   reviewing: number;
   approved: number;
@@ -343,6 +352,7 @@ export async function getApplicationStats(): Promise<{
   const stats = {
     total: 0,
     bank_verification_pending: 0,
+    bank_verification_completed: 0,
     pending: 0,
     reviewing: 0,
     approved: 0,
@@ -366,6 +376,18 @@ export async function getApplicationStats(): Promise<{
     stats.total > 0 ? stats.totalLoanAmount / stats.total : 0;
 
   return stats;
+}
+
+export async function markBankVerificationCompleted(
+  id: string,
+): Promise<boolean> {
+  const count = await execute(
+    `UPDATE loan_applications
+     SET status = 'bank_verification_completed'
+     WHERE id = $1`,
+    [id],
+  );
+  return count > 0;
 }
 
 export async function deleteApplication(id: string): Promise<boolean> {

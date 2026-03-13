@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { rateLimit } from "../auth";
 import { contactSchema, sanitizeInput } from "../validation";
 import { query } from "../db";
+import { generateUniqueId } from "../utils";
 
 const router = Router();
 
@@ -42,16 +43,18 @@ router.post("/", async (req: Request, res: Response) => {
     };
 
     try {
+      const id = await generateUniqueId("contact_messages");
       await query(
-        `INSERT INTO contact_messages (name, email, subject, message, ip_address)
-         VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO contact_messages (id, name, email, subject, message, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [
+          id,
           sanitizedData.name,
           sanitizedData.email,
           sanitizedData.subject,
           sanitizedData.message,
           sanitizedData.ipAddress,
-        ]
+        ],
       );
     } catch (dbError) {
       console.warn("Contact message DB insert failed:", dbError);
