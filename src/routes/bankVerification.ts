@@ -38,10 +38,10 @@ router.post("/", async (req: Request, res: Response) => {
         return;
       }
       if (application) {
-        res.status(400).json({
-          error: "Application Alredy Exist.",
+        return res.status(409).json({
+          error: "Application already exists.",
+          application,
         });
-        return;
       }
     } catch (dbError) {
       console.error("Failed to verify application:", dbError);
