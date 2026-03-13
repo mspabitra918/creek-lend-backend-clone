@@ -121,7 +121,8 @@ router.post("/", async (req: Request, res: Response) => {
     res.json({
       success: true,
       applicationId,
-      message: "Application submitted successfully",
+      status: "bank_verification_pending",
+      message: "Application submitted successfully. Bank verification is in progress.",
     });
   } catch (error) {
     console.error("Application submission error:", error);

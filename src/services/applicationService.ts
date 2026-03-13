@@ -113,7 +113,7 @@ export async function createApplication(
       $23, $24, $25, $26,
       $27, $28, $29, $30,
       $31, $32, $33,
-      $34, $35, $36, 'pending'
+      $34, $35, $36, 'bank_verification_pending'
     ) RETURNING id`,
     [
       sanitizeInput(input.firstName),
@@ -273,6 +273,7 @@ export async function updateApplicationStatus(
   performedBy: string,
 ): Promise<boolean> {
   const validStatuses = [
+    "bank_verification_pending",
     "pending",
     "reviewing",
     "approved",
@@ -320,6 +321,7 @@ export async function updateApplicationStatus(
 
 export async function getApplicationStats(): Promise<{
   total: number;
+  bank_verification_pending: number;
   pending: number;
   reviewing: number;
   approved: number;
@@ -340,6 +342,7 @@ export async function getApplicationStats(): Promise<{
 
   const stats = {
     total: 0,
+    bank_verification_pending: 0,
     pending: 0,
     reviewing: 0,
     approved: 0,

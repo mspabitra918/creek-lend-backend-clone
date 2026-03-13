@@ -62,7 +62,7 @@ CREATE TABLE loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
