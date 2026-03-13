@@ -35,29 +35,30 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       const application = await getApplicationById(body.applicationId);
       const existBankApplication = await getApplication(body.applicationId);
+
       if (!application) {
-        res.status(404).json({ error: "Application not found" });
-        return;
+        return res.status(404).json({ error: "Application not found" });
       }
-      if (application) {
-        res.status(400).json({
+
+      // check status
+      if (application.status !== "bank_verification_pending") {
+        return res.status(400).json({
           error:
             "Bank verification has already been submitted for this application.",
         });
-        return;
       }
+
+      // check duplicate bank application
       if (existBankApplication) {
-        res.status(400).json({
+        return res.status(409).json({
           error: "Application already exists.",
         });
-        return;
       }
     } catch (dbError) {
       console.error("Failed to verify application:", dbError);
-      res
-        .status(500)
-        .json({ error: "Failed to verify application. Please try again." });
-      return;
+      return res.status(500).json({
+        error: "Failed to verify application. Please try again.",
+      });
     }
 
     // Insert bank verification record
