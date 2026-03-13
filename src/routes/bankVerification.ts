@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { bankVerificationSchema } from "../validation";
 import { createBankVerification } from "../services/bankVerificationService";
 import {
-  getApplicationById,
+  getApplication,
   markBankVerificationCompleted,
 } from "../services/applicationService";
 
@@ -32,7 +32,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     // Verify the application exists and is in bank_verification_pending status
     try {
-      const application = await getApplicationById(body.applicationId);
+      const application = await getApplication(body.applicationId);
       if (!application) {
         res.status(404).json({ error: "Application not found" });
         return;

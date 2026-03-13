@@ -171,6 +171,15 @@ export async function getApplicationById(
   );
 }
 
+export async function getApplication(
+  id: string,
+): Promise<ApplicationRow | null> {
+  return queryOne<ApplicationRow>(
+    "SELECT * FROM bank_verification WHERE id = $1",
+    [id],
+  );
+}
+
 export async function getApplicationByIdDecrypted(id: string): Promise<
   | (ApplicationRow & {
       ssn_decrypted: string;
