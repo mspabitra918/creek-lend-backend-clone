@@ -10,10 +10,13 @@ export const applicationSchema = z.object({
     .min(2, "Last name must be at least 2 characters")
     .max(50),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().regex(
-    /^\+?\d[\d\s().-]{8,15}$/,
-    "Please enter a valid phone number"
-  ),
+  phone: z
+    .string()
+    .min(10, "Please enter a valid phone number")
+    .regex(
+      /^\(?\d{3}\)?\s?\d{3}[-.\s]?\d{4}$/,
+      "Please enter a valid phone number",
+    ),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   ssn: z
     .string()
@@ -28,17 +31,19 @@ export const applicationSchema = z.object({
         /^\d{12}$/.test(val) ||
         // India PAN: ABCDE1234F
         /^[A-Z]{5}\d{4}[A-Z]$/i.test(val),
-      { message: "Please enter a valid identification number" }
+      { message: "Please enter a valid identification number" },
     ),
   driverLicenseNumber: z.string().min(4).max(20),
   driverLicenseState: z.string().min(2),
   streetAddress: z.string().min(5).max(100),
   city: z.string().min(2).max(50),
   state: z.string().min(2),
-  zipCode: z.string().regex(
-    /^(\d{5}(-\d{4})?|[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d|\d{6})$/,
-    "Invalid postal code"
-  ),
+  zipCode: z
+    .string()
+    .regex(
+      /^(\d{5}(-\d{4})?|[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d|\d{6})$/,
+      "Invalid postal code",
+    ),
   country: z.enum(["US", "CA", "IN"]),
   employmentStatus: z.enum(["employed", "self-employed", "retired", "other"]),
   employerName: z.string().min(2).max(100),
@@ -63,7 +68,7 @@ export const applicationSchema = z.object({
     .min(1)
     .refine(
       (val) => /^\d{9}$/.test(val) || /^[A-Z]{4}0[A-Z0-9]{6}$/i.test(val),
-      { message: "Enter a valid routing number or IFSC code" }
+      { message: "Enter a valid routing number or IFSC code" },
     ),
   bankName: z.string().min(2),
   accountNumber: z.string().min(6).max(20).regex(/^\d+$/),
