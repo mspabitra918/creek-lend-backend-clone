@@ -15,6 +15,7 @@ import {
   getApplicationStats,
   getAuditLog,
 } from "../services/applicationService";
+import { sendStatusUpdateEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -264,6 +265,22 @@ router.patch(
       if (!updated) {
         res.status(404).json({ error: "Application not found" });
         return;
+      }
+
+      // Send status update email to applicant
+      try {
+        const application = await getApplicationById(id);
+        if (application) {
+          await sendStatusUpdateEmail({
+            applicationId: id,
+            firstName: application.first_name,
+            email: application.email,
+            loanAmount: application.loan_amount,
+            status,
+          });
+        }
+      } catch (emailError) {
+        console.error("Status update email error:", emailError);
       }
 
       res.json({
