@@ -229,7 +229,9 @@ export async function listApplications(
   let paramIndex = 1;
 
   if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    conditions.push(`created_at >= $${paramIndex}::date AND created_at < ($${paramIndex}::date + INTERVAL '1 day')`);
+    conditions.push(
+      `created_at >= $${paramIndex}::date AND created_at < ($${paramIndex}::date + INTERVAL '1 day')`,
+    );
     params.push(date);
     paramIndex++;
   }
@@ -294,6 +296,7 @@ export async function updateApplicationStatus(
 ): Promise<boolean> {
   const validStatuses = [
     "bank_verification_pending",
+    "bank_verification_in_progress",
     "bank_verification_completed",
     "bank_verification_failed",
     "pending",
@@ -335,6 +338,11 @@ export async function updateApplicationStatus(
         `UPDATE bank_verification SET verification_status = 'verified' WHERE application_id = $1`,
         [id],
       );
+    } else if (status === "bank_verification_in_progress") {
+      await client.query(
+        `UPDATE bank_verification SET verification_status = 'bank_verification_in_progress' WHERE application_id = $1`,
+        [id],
+      );
     }
 
     const auditId = await generateUniqueId("audit_log", "id", client);
@@ -360,6 +368,7 @@ export async function updateApplicationStatus(
 export async function getApplicationStats(): Promise<{
   total: number;
   bank_verification_pending: number;
+  bank_verification_in_progress: number;
   bank_verification_completed: number;
   bank_verification_failed: number;
   pending: number;
@@ -383,6 +392,7 @@ export async function getApplicationStats(): Promise<{
   const stats = {
     total: 0,
     bank_verification_pending: 0,
+    bank_verification_in_progress: 0,
     bank_verification_completed: 0,
     bank_verification_failed: 0,
     pending: 0,

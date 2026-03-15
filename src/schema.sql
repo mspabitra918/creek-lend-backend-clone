@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -71,10 +71,16 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     funded_at TIMESTAMP WITH TIME ZONE
 );
 
--- Update status constraint for existing databases (add bank_verification_failed)
+-- Update status constraint for existing databases (add bank_verification_in_progress)
 ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;
 ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
-    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
+    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
+
+-- Update bank_verification column size and constraint for existing databases
+ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);
+ALTER TABLE bank_verification DROP CONSTRAINT IF EXISTS bank_verification_verification_status_check;
+ALTER TABLE bank_verification ADD CONSTRAINT bank_verification_verification_status_check
+    CHECK (verification_status IN ('pending', 'verified', 'failed', 'bank_verification_in_progress'));
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_applications_email ON loan_applications(email);
@@ -155,7 +161,7 @@ CREATE TABLE IF NOT EXISTS bank_verification (
     user_agent TEXT DEFAULT '',
 
     -- Status
-    verification_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed')),
+    verification_status VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed' ,'bank_verification_in_progress')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
