@@ -3,6 +3,7 @@ import { rateLimit } from "../auth";
 import { contactSchema, sanitizeInput } from "../validation";
 import { query } from "../db";
 import { generateUniqueId } from "../utils";
+import { sendDiscordNotification } from "../services/discordService";
 
 const router = Router();
 
@@ -60,6 +61,15 @@ router.post("/", async (req: Request, res: Response) => {
       console.warn("Contact message DB insert failed:", dbError);
       console.log("Contact form submission:", sanitizedData);
     }
+
+    // Send Discord notification (non-blocking)
+    sendDiscordNotification(
+      `✉️ **New Contact Message**\n` +
+      `**Name:** ${sanitizedData.name}\n` +
+      `**Email:** ${sanitizedData.email}\n` +
+      `**Subject:** ${sanitizedData.subject}\n` +
+      `**Message:** ${sanitizedData.message}`
+    ).catch((err) => console.error("Discord notification error:", err));
 
     res.json({
       success: true,

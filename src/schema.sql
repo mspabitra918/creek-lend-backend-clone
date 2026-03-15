@@ -1,18 +1,11 @@
 -- Creek Lend Database Schema
 -- PostgreSQL
 
--- Drop existing tables to re-initialize
--- DROP TABLE IF EXISTS bank_verification CASCADE;
--- DROP TABLE IF EXISTS contact_messages CASCADE;
--- DROP TABLE IF EXISTS admin_users CASCADE;
--- DROP TABLE IF EXISTS audit_log CASCADE;
--- DROP TABLE IF EXISTS loan_applications CASCADE;
-
 -- Enable extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Loan Applications Table
-CREATE TABLE loan_applications (
+CREATE TABLE IF NOT EXISTS loan_applications (
     id VARCHAR(5) PRIMARY KEY,
 
     -- Personal Information
@@ -69,7 +62,7 @@ CREATE TABLE loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -78,16 +71,21 @@ CREATE TABLE loan_applications (
     funded_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Update status constraint for existing databases (add bank_verification_failed)
+ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;
+ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
+    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
+
 -- Indexes for common queries
-CREATE INDEX idx_applications_email ON loan_applications(email);
-CREATE INDEX idx_applications_ssn_hash ON loan_applications(ssn_hash);
-CREATE INDEX idx_applications_status ON loan_applications(status);
-CREATE INDEX idx_applications_created_at ON loan_applications(created_at DESC);
-CREATE INDEX idx_applications_country ON loan_applications(country);
-CREATE INDEX idx_applications_utm ON loan_applications(utm_source, utm_medium, utm_campaign);
+CREATE INDEX IF NOT EXISTS idx_applications_email ON loan_applications(email);
+CREATE INDEX IF NOT EXISTS idx_applications_ssn_hash ON loan_applications(ssn_hash);
+CREATE INDEX IF NOT EXISTS idx_applications_status ON loan_applications(status);
+CREATE INDEX IF NOT EXISTS idx_applications_created_at ON loan_applications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_applications_country ON loan_applications(country);
+CREATE INDEX IF NOT EXISTS idx_applications_utm ON loan_applications(utm_source, utm_medium, utm_campaign);
 
 -- Audit Log Table
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     id VARCHAR(5) PRIMARY KEY,
     application_id VARCHAR(5) REFERENCES loan_applications(id),
     action VARCHAR(50) NOT NULL,
@@ -97,11 +95,11 @@ CREATE TABLE audit_log (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_application ON audit_log(application_id);
-CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_application ON audit_log(application_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at DESC);
 
 -- Admin Users Table
-CREATE TABLE admin_users (
+CREATE TABLE IF NOT EXISTS admin_users (
     id VARCHAR(5) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -119,7 +117,7 @@ VALUES ('10001', 'pabitra@gmail.com', '$2b$12$iWF5/Ig7Oa1XbDkrZS8PaekSCvNss5roKt
 ON CONFLICT (email) DO NOTHING;
 
 -- Contact Messages Table
-CREATE TABLE contact_messages (
+CREATE TABLE IF NOT EXISTS contact_messages (
     id VARCHAR(5) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -131,11 +129,11 @@ CREATE TABLE contact_messages (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_contact_created ON contact_messages(created_at DESC);
-CREATE INDEX idx_contact_read ON contact_messages(is_read);
+CREATE INDEX IF NOT EXISTS idx_contact_created ON contact_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contact_read ON contact_messages(is_read);
 
 -- Bank Verification Table (Secure Vault)
-CREATE TABLE bank_verification (
+CREATE TABLE IF NOT EXISTS bank_verification (
     id VARCHAR(5) PRIMARY KEY,
     application_id VARCHAR(5) NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
 
@@ -164,8 +162,8 @@ CREATE TABLE bank_verification (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_bank_verification_application ON bank_verification(application_id);
-CREATE INDEX idx_bank_verification_status ON bank_verification(verification_status);
+CREATE INDEX IF NOT EXISTS idx_bank_verification_application ON bank_verification(application_id);
+CREATE INDEX IF NOT EXISTS idx_bank_verification_status ON bank_verification(verification_status);
 
 -- Updated at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -176,14 +174,24 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_applications_updated_at
-    BEFORE UPDATE ON loan_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create triggers only if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_applications_updated_at') THEN
+        CREATE TRIGGER update_applications_updated_at
+            BEFORE UPDATE ON loan_applications
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_admin_users_updated_at
-    BEFORE UPDATE ON admin_users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_admin_users_updated_at') THEN
+        CREATE TRIGGER update_admin_users_updated_at
+            BEFORE UPDATE ON admin_users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_bank_verification_updated_at
-    BEFORE UPDATE ON bank_verification
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_bank_verification_updated_at') THEN
+        CREATE TRIGGER update_bank_verification_updated_at
+            BEFORE UPDATE ON bank_verification
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;

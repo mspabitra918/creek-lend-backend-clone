@@ -7,6 +7,7 @@ import {
 } from "../services/applicationService";
 import { trackLeadEvent } from "../services/metaCapi";
 import { sendApplicationConfirmationEmail } from "../services/emailService";
+import { sendDiscordNotification } from "../services/discordService";
 
 const router = Router();
 
@@ -108,6 +109,18 @@ router.post("/", async (req: Request, res: Response) => {
       loanPurpose: body.loanPurpose,
       loanTerm: body.loanTerm,
     }).catch((err) => console.error("Email send error:", err));
+
+    // Send Discord notification (non-blocking)
+    sendDiscordNotification(
+      `📋 **New Loan Application**\n` +
+      `**Name:** ${body.firstName} ${body.lastName}\n` +
+      `**Email:** ${body.email}\n` +
+      `**Phone:** ${body.phone}\n` +
+      `**Loan Amount:** $${body.loanAmount}\n` +
+      `**Loan Purpose:** ${body.loanPurpose}\n` +
+      `**Loan Term:** ${body.loanTerm} months\n` +
+      `**Application ID:** ${applicationId}`
+    ).catch((err) => console.error("Discord notification error:", err));
 
     // Fire Meta CAPI event (non-blocking)
     trackLeadEvent({

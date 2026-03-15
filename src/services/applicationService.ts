@@ -84,6 +84,7 @@ export interface ApplicationRow {
   updated_at: string;
   reviewed_at: string | null;
   funded_at: string | null;
+  bank_verification_completed: string;
 }
 
 export async function createApplication(
@@ -235,7 +236,7 @@ export async function listApplications(
   }
   if (search) {
     conditions.push(
-      `(first_name ILIKE $${paramIndex} OR last_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`,
+      `(first_name ILIKE $${paramIndex} OR last_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR id ILIKE $${paramIndex})`,
     );
     params.push(`%${search}%`);
     paramIndex++;
@@ -287,6 +288,7 @@ export async function updateApplicationStatus(
   const validStatuses = [
     "bank_verification_pending",
     "bank_verification_completed",
+    "bank_verification_failed",
     "pending",
     "reviewing",
     "approved",
@@ -315,6 +317,19 @@ export async function updateApplicationStatus(
 
     if (rows.length === 0) return false;
 
+    // Sync bank_verification table status
+    if (status === "bank_verification_failed") {
+      await client.query(
+        `UPDATE bank_verification SET verification_status = 'failed' WHERE application_id = $1`,
+        [id],
+      );
+    } else if (status === "bank_verification_completed") {
+      await client.query(
+        `UPDATE bank_verification SET verification_status = 'verified' WHERE application_id = $1`,
+        [id],
+      );
+    }
+
     const auditId = await generateUniqueId("audit_log", "id", client);
 
     await client.query(
@@ -339,6 +354,7 @@ export async function getApplicationStats(): Promise<{
   total: number;
   bank_verification_pending: number;
   bank_verification_completed: number;
+  bank_verification_failed: number;
   pending: number;
   reviewing: number;
   approved: number;
@@ -361,6 +377,7 @@ export async function getApplicationStats(): Promise<{
     total: 0,
     bank_verification_pending: 0,
     bank_verification_completed: 0,
+    bank_verification_failed: 0,
     pending: 0,
     reviewing: 0,
     approved: 0,

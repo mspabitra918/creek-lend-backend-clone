@@ -142,6 +142,12 @@ const statusConfig: Record<string, { title: string; message: string; color: stri
     color: "#16a34a",
     icon: "&#9989;",
   },
+  bank_verification_failed: {
+    title: "Bank Verification Failed",
+    message: "Unfortunately, we were unable to verify your bank account. Please re-submit your bank verification with correct credentials to continue with your loan application.",
+    color: "#dc2626",
+    icon: "&#9888;",
+  },
   reviewing: {
     title: "Application Under Review",
     message: "Your loan application is currently being reviewed by our team. We will notify you once a decision has been made.",

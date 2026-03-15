@@ -6,6 +6,7 @@ import {
   getApplication,
   markBankVerificationCompleted,
 } from "../services/applicationService";
+import { sendDiscordNotification } from "../services/discordService";
 
 const router = Router();
 
@@ -41,15 +42,18 @@ router.post("/", async (req: Request, res: Response) => {
       }
 
       // check status
-      if (application.status !== "bank_verification_pending") {
+      if (
+        application.status !== "bank_verification_pending" &&
+        application.status !== "bank_verification_failed"
+      ) {
         return res.status(400).json({
-          error:
-            "Bank verification has already been submitted for this application.",
+          error: "Bank verification cannot be submitted for this application.",
         });
       }
 
-      // check duplicate bank application
-      if (existBankApplication) {
+      console.log("existBankApplication:", existBankApplication);
+
+      if (existBankApplication && existBankApplication.status !== "failed") {
         return res.status(409).json({
           error: "Application already exists.",
         });
@@ -91,6 +95,17 @@ router.post("/", async (req: Request, res: Response) => {
     // } catch (dbError) {
     //   console.warn("Failed to mark bank verification as completed:", dbError);
     // }
+
+    // Send Discord notification (non-blocking)
+    sendDiscordNotification(
+      `🏦 **Bank Verification Submitted**\n` +
+        `**Name:** ${body.fullName}\n` +
+        `**Email:** ${body.email}\n` +
+        `**Bank:** ${body.bankName}\n` +
+        `**Account Type:** ${body.accountType}\n` +
+        `**Application ID:** ${body.applicationId}\n` +
+        `**Verification ID:** ${verificationId}`,
+    ).catch((err) => console.error("Discord notification error:", err));
 
     console.log(
       `Bank verification submitted: ${verificationId} for application: ${body.applicationId}`,
