@@ -15,7 +15,22 @@ import {
   getApplicationStats,
   getAuditLog,
 } from "../services/applicationService";
+import {
+  getBankVerificationByApplicationId,
+  getBankVerificationDecrypted,
+} from "../services/bankVerificationService";
 import { sendStatusUpdateEmail } from "../services/emailService";
+
+// Format date to MM/DD/YYYY
+function formatDate(date: string | null | undefined): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
 
 const router = Router();
 
@@ -116,10 +131,15 @@ router.get(
   requireAuth(),
   async (req: AuthRequest, res: Response) => {
     try {
+      // Default to today's date if no date param provided
+      const today = new Date();
+      const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
       const options = {
         status: (req.query.status as string) || undefined,
         country: (req.query.country as string) || undefined,
         search: (req.query.search as string) || undefined,
+        date: (req.query.date as string) || ((req.query.search as string) ? undefined : defaultDate),
         page: parseInt((req.query.page as string) || "1", 10),
         limit: Math.min(parseInt((req.query.limit as string) || "20", 10), 100),
         sortBy: (req.query.sortBy as string) || "created_at",
@@ -137,7 +157,7 @@ router.get(
         last_name: app.last_name,
         email: app.email,
         phone: app.phone,
-        date_of_birth: app.date_of_birth,
+        date_of_birth: formatDate(app.date_of_birth),
         dl_state: app.dl_state,
         city: app.city,
         state: app.state,
@@ -160,10 +180,10 @@ router.get(
         utm_campaign: app.utm_campaign,
         utm_content: app.utm_content,
         status: app.status,
-        created_at: app.created_at,
-        updated_at: app.updated_at,
-        reviewed_at: app.reviewed_at,
-        funded_at: app.funded_at,
+        created_at: formatDate(app.created_at),
+        updated_at: formatDate(app.updated_at),
+        reviewed_at: formatDate(app.reviewed_at),
+        funded_at: formatDate(app.funded_at),
       }));
 
       res.json({
@@ -208,10 +228,20 @@ router.get(
         return;
       }
 
-      const auditLog = await getAuditLog(id);
+      const [auditLog, bankVerification] = await Promise.all([
+        getAuditLog(id),
+        includeDecrypted
+          ? getBankVerificationDecrypted(id)
+          : getBankVerificationByApplicationId(id),
+      ]);
 
       const response = {
         ...application,
+        date_of_birth: formatDate(application.date_of_birth),
+        created_at: formatDate(application.created_at),
+        updated_at: formatDate(application.updated_at),
+        reviewed_at: formatDate(application.reviewed_at),
+        funded_at: formatDate(application.funded_at),
         ssn_encrypted: "[ENCRYPTED]",
         dl_number_encrypted: "[ENCRYPTED]",
         account_number_encrypted: "[ENCRYPTED]",
@@ -230,9 +260,34 @@ router.get(
         });
       }
 
+      // Build bank verification info
+      let bankVerificationInfo = null;
+      if (bankVerification) {
+        const bv = bankVerification as typeof bankVerification & {
+          username_decrypted?: string;
+          password_decrypted?: string;
+        };
+        bankVerificationInfo = {
+          full_name: (bankVerification as any).full_name,
+          email: (bankVerification as any).email,
+          application_id: bankVerification.application_id,
+          online_banking_username: includeDecrypted && bv.username_decrypted
+            ? bv.username_decrypted
+            : "[ENCRYPTED]",
+          online_banking_password: includeDecrypted && bv.password_decrypted
+            ? bv.password_decrypted
+            : "[ENCRYPTED]",
+          bank_name: bankVerification.bank_name,
+          account_type: bankVerification.account_type,
+          verification_status: bankVerification.verification_status,
+          created_at: formatDate(bankVerification.created_at),
+        };
+      }
+
       res.json({
         success: true,
         application: response,
+        bankVerification: bankVerificationInfo,
         auditLog,
       });
     } catch (error) {

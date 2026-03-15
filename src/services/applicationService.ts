@@ -203,6 +203,7 @@ export interface ListApplicationsOptions {
   status?: string;
   country?: string;
   search?: string;
+  date?: string;
   page?: number;
   limit?: number;
   sortBy?: string;
@@ -216,6 +217,7 @@ export async function listApplications(
     status,
     country,
     search,
+    date,
     page = 1,
     limit = 20,
     sortBy = "created_at",
@@ -226,6 +228,11 @@ export async function listApplications(
   const params: unknown[] = [];
   let paramIndex = 1;
 
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    conditions.push(`created_at >= $${paramIndex}::date AND created_at < ($${paramIndex}::date + INTERVAL '1 day')`);
+    params.push(date);
+    paramIndex++;
+  }
   if (status) {
     conditions.push(`status = $${paramIndex++}`);
     params.push(status);
