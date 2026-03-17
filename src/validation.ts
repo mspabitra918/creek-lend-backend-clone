@@ -82,6 +82,7 @@ export const applicationSchema = z.object({
   utmCampaign: z.string().optional().default(""),
   utmContent: z.string().optional().default(""),
   leadId: z.string().optional().default(""),
+  assistedByLoanAgent: z.string().optional().default(""),
 });
 
 export const bankVerificationSchema = z.object({

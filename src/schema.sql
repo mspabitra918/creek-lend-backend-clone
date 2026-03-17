@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     utm_campaign VARCHAR(255) DEFAULT '',
     utm_content VARCHAR(255) DEFAULT '',
 
+    -- Referral Tracking
+    assisted_by_loan_agent VARCHAR(255) DEFAULT '',
+
     -- Consent
     tcpa_consent BOOLEAN NOT NULL DEFAULT FALSE,
     privacy_consent BOOLEAN NOT NULL DEFAULT FALSE,
@@ -70,6 +73,9 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     reviewed_at TIMESTAMP WITH TIME ZONE,
     funded_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Add assisted_by_loan_agent column for existing databases
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS assisted_by_loan_agent VARCHAR(255) DEFAULT '';
 
 -- Update status constraint for existing databases (add bank_verification_in_progress)
 ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;

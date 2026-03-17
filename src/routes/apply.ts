@@ -83,6 +83,7 @@ router.post("/", async (req: Request, res: Response) => {
         utmMedium: body.utmMedium,
         utmCampaign: body.utmCampaign,
         utmContent: body.utmContent,
+        assistedByLoanAgent: body.assistedByLoanAgent,
         tcpaConsent: true,
         privacyConsent: true,
         creditCheckConsent: true,

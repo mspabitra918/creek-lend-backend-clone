@@ -67,7 +67,7 @@ export async function sendApplicationConfirmationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Creek Lend</h1>
+        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: auto; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <h2 style="color: #111827; margin-top: 0;">Application Received!</h2>
@@ -229,7 +229,7 @@ export async function sendStatusUpdateEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Creek Lend</h1>
+        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: auto; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -263,9 +263,13 @@ export async function sendStatusUpdateEmail(
         <p style="color: #374151; font-size: 14px;">
           You can check your application status at any time using your Application ID <strong>${applicationId}</strong>.
         </p>
-        ${status === "bank_verification_failed" ? `<div style="text-align: center; margin: 25px 0;">
+        ${
+          status === "bank_verification_failed"
+            ? `<div style="text-align: center; margin: 25px 0;">
           <a href="${process.env.FRONTEND_URL}/verify-bank" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
-        </div>` : ""}
+        </div>`
+            : ""
+        }
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">

@@ -33,6 +33,7 @@ export interface CreateApplicationInput {
   utmMedium?: string;
   utmCampaign?: string;
   utmContent?: string;
+  assistedByLoanAgent?: string;
   tcpaConsent: boolean;
   privacyConsent: boolean;
   creditCheckConsent: boolean;
@@ -73,6 +74,7 @@ export interface ApplicationRow {
   utm_medium: string;
   utm_campaign: string;
   utm_content: string;
+  assisted_by_loan_agent: string;
   tcpa_consent: boolean;
   privacy_consent: boolean;
   credit_check_consent: boolean;
@@ -106,6 +108,7 @@ export async function createApplication(
       loan_amount, loan_purpose, loan_term,
       bank_name, account_number_encrypted, routing_number, account_type,
       utm_source, utm_medium, utm_campaign, utm_content,
+      assisted_by_loan_agent,
       tcpa_consent, privacy_consent, credit_check_consent,
       ip_address, user_agent, lead_id, status
     ) VALUES (
@@ -116,8 +119,9 @@ export async function createApplication(
       $21, $22, $23,
       $24, $25, $26, $27,
       $28, $29, $30, $31,
-      $32, $33, $34,
-      $35, $36, $37, 'bank_verification_pending'
+      $32,
+      $33, $34, $35,
+      $36, $37, $38, 'bank_verification_pending'
     ) RETURNING id`,
     [
       id,
@@ -151,6 +155,7 @@ export async function createApplication(
       sanitizeInput(input.utmMedium || ""),
       sanitizeInput(input.utmCampaign || ""),
       sanitizeInput(input.utmContent || ""),
+      sanitizeInput(input.assistedByLoanAgent || ""),
       input.tcpaConsent,
       input.privacyConsent,
       input.creditCheckConsent,
