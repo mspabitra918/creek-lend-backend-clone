@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 
-const ALLOWED_COUNTRIES = ["US", "CA", "IN"];
+const ALLOWED_COUNTRIES = ["US", "PK", "IN"];
 
 const router = Router();
 
@@ -13,7 +13,12 @@ router.get("/", async (req: Request, res: Response) => {
       "127.0.0.1";
 
     // In development, allow all
-    if (ip === "127.0.0.1" || ip === "::1" || ip === "unknown" || ip === "::ffff:127.0.0.1") {
+    if (
+      ip === "127.0.0.1" ||
+      ip === "::1" ||
+      ip === "unknown" ||
+      ip === "::ffff:127.0.0.1"
+    ) {
       res.json({
         allowed: true,
         country: "US",
