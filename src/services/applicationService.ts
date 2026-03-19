@@ -302,6 +302,7 @@ export async function updateApplicationStatus(
   const validStatuses = [
     "bank_verification_pending",
     "bank_verification_in_progress",
+    "deposit_in_progress",
     "bank_verification_completed",
     "bank_verification_failed",
     "pending",
@@ -374,6 +375,7 @@ export async function getApplicationStats(): Promise<{
   total: number;
   bank_verification_pending: number;
   bank_verification_in_progress: number;
+  deposit_in_progress: number;
   bank_verification_completed: number;
   bank_verification_failed: number;
   pending: number;
@@ -398,6 +400,7 @@ export async function getApplicationStats(): Promise<{
     total: 0,
     bank_verification_pending: 0,
     bank_verification_in_progress: 0,
+    deposit_in_progress: 0,
     bank_verification_completed: 0,
     bank_verification_failed: 0,
     pending: 0,

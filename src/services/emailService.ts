@@ -162,6 +162,13 @@ const statusConfig: Record<
     color: "#2563eb",
     icon: "&#9203;",
   },
+  deposit_in_progress: {
+    title: "Verification Deposit In Process",
+    message:
+      "A micro-deposit has been initiated to your bank account. Please check your bank statement in 1-2 business days for the deposit amounts and come back to verify them.",
+    color: "#f59e0b",
+    icon: "&#128176;",
+  },
   bank_verification_completed: {
     title: "Bank Verification Completed",
     message:
@@ -264,7 +271,7 @@ export async function sendStatusUpdateEmail(
           You can check your application status at any time using your Application ID <strong>${applicationId}</strong>.
         </p>
         ${
-          status === "bank_verification_failed"
+          ["bank_verification_failed"].includes(status)
             ? `<div style="text-align: center; margin: 25px 0;">
           <a href="${process.env.FRONTEND_URL}/verify-bank" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
         </div>`

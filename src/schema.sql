@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'deposit_in_progress', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -80,7 +80,7 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS assisted_by_loan_agent VA
 -- Update status constraint for existing databases (add bank_verification_in_progress)
 ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;
 ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
-    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
+    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
 
 -- Update bank_verification column size and constraint for existing databases
 ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);

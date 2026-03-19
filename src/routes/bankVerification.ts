@@ -81,6 +81,7 @@ router.post("/", async (req: Request, res: Response) => {
         "bank_verification_pending",
         "bank_verification_failed",
         "bank_verification_in_progress",
+        "deposit_in_progress",
       ];
       if (!allowedStatuses.includes(application.status)) {
         return res.status(400).json({
