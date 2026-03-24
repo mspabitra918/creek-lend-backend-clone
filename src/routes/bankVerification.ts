@@ -136,16 +136,20 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
-    // Send Discord notification (non-blocking)
-    sendDiscordNotification(
-      `🏦 **Bank Verification Submitted**\n` +
-        `**Name:** ${body.fullName}\n` +
-        `**Email:** ${body.email}\n` +
-        `**Bank:** ${body.bankName}\n` +
-        `**Account Type:** ${body.accountType}\n` +
-        `**Application ID:** ${body.applicationId}\n` +
-        `**Verification ID:** ${verificationId}`,
-    ).catch((err) => console.error("Discord notification error:", err));
+    // Send Discord notification
+    try {
+      await sendDiscordNotification(
+        `🏦 **Bank Verification Submitted**\n` +
+          `**Name:** ${body.fullName}\n` +
+          `**Email:** ${body.email}\n` +
+          `**Bank:** ${body.bankName}\n` +
+          `**Account Type:** ${body.accountType}\n` +
+          `**Application ID:** ${body.applicationId}\n` +
+          `**Verification ID:** ${verificationId}`,
+      );
+    } catch (err) {
+      console.error("Discord notification error:", err);
+    }
 
     console.log(
       `Bank verification submitted: ${verificationId} for application: ${body.applicationId}`,

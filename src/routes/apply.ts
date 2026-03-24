@@ -100,41 +100,53 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
-    // Send confirmation email (non-blocking)
-    sendApplicationConfirmationEmail({
-      applicationId,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      email: body.email,
-      loanAmount: body.loanAmount,
-      loanPurpose: body.loanPurpose,
-      loanTerm: body.loanTerm,
-    }).catch((err) => console.error("Email send error:", err));
+    // Send confirmation email
+    try {
+      await sendApplicationConfirmationEmail({
+        applicationId,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: body.email,
+        loanAmount: body.loanAmount,
+        loanPurpose: body.loanPurpose,
+        loanTerm: body.loanTerm,
+      });
+    } catch (err) {
+      console.error("Email send error:", err);
+    }
 
-    // Send Discord notification (non-blocking)
-    sendDiscordNotification(
-      `📋 **New Loan Application**\n` +
-      `**Name:** ${body.firstName} ${body.lastName}\n` +
-      `**Email:** ${body.email}\n` +
-      `**Phone:** ${body.phone}\n` +
-      `**Loan Amount:** $${body.loanAmount}\n` +
-      `**Loan Purpose:** ${body.loanPurpose}\n` +
-      `**Loan Term:** ${body.loanTerm} months\n` +
-      `**Application ID:** ${applicationId}`
-    ).catch((err) => console.error("Discord notification error:", err));
+    // Send Discord notification
+    try {
+      await sendDiscordNotification(
+        `📋 **New Loan Application**\n` +
+        `**Name:** ${body.firstName} ${body.lastName}\n` +
+        `**Email:** ${body.email}\n` +
+        `**Phone:** ${body.phone}\n` +
+        `**Loan Amount:** $${body.loanAmount}\n` +
+        `**Loan Purpose:** ${body.loanPurpose}\n` +
+        `**Loan Term:** ${body.loanTerm} months\n` +
+        `**Application ID:** ${applicationId}`
+      );
+    } catch (err) {
+      console.error("Discord notification error:", err);
+    }
 
-    // Fire Meta CAPI event (non-blocking)
-    trackLeadEvent({
-      email: body.email,
-      phone: body.phone,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      ipAddress: ip,
-      userAgent,
-      loanAmount: body.loanAmount,
-      loanPurpose: body.loanPurpose,
-      sourceUrl: req.headers.referer || undefined,
-    }).catch((err) => console.error("Meta CAPI error:", err));
+    // Fire Meta CAPI event
+    try {
+      await trackLeadEvent({
+        email: body.email,
+        phone: body.phone,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        ipAddress: ip,
+        userAgent,
+        loanAmount: body.loanAmount,
+        loanPurpose: body.loanPurpose,
+        sourceUrl: req.headers.referer || undefined,
+      });
+    } catch (err) {
+      console.error("Meta CAPI error:", err);
+    }
 
     console.log(`Application submitted: ${applicationId}`);
 

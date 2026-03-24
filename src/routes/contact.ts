@@ -62,14 +62,18 @@ router.post("/", async (req: Request, res: Response) => {
       console.log("Contact form submission:", sanitizedData);
     }
 
-    // Send Discord notification (non-blocking)
-    sendDiscordNotification(
-      `✉️ **New Contact Message**\n` +
-      `**Name:** ${sanitizedData.name}\n` +
-      `**Email:** ${sanitizedData.email}\n` +
-      `**Subject:** ${sanitizedData.subject}\n` +
-      `**Message:** ${sanitizedData.message}`
-    ).catch((err) => console.error("Discord notification error:", err));
+    // Send Discord notification
+    try {
+      await sendDiscordNotification(
+        `✉️ **New Contact Message**\n` +
+        `**Name:** ${sanitizedData.name}\n` +
+        `**Email:** ${sanitizedData.email}\n` +
+        `**Subject:** ${sanitizedData.subject}\n` +
+        `**Message:** ${sanitizedData.message}`
+      );
+    } catch (err) {
+      console.error("Discord notification error:", err);
+    }
 
     res.json({
       success: true,
