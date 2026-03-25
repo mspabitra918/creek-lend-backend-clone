@@ -111,7 +111,7 @@ export async function sendApplicationConfirmationEmail(
           Please save your Application ID <strong>${applicationId}</strong> for future reference. You can use it to check your application status at any time.
         </p>
         <div style="text-align: center; margin: 25px 0;">
-          <a href="${process.env.FRONTEND_URL}/verify-bank" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
+          <a href="${process.env.FRONTEND_URL}/verify-bank?applicationId=${applicationId}" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
         </div>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
@@ -273,7 +273,7 @@ export async function sendStatusUpdateEmail(
         ${
           ["bank_verification_failed"].includes(status)
             ? `<div style="text-align: center; margin: 25px 0;">
-          <a href="${process.env.FRONTEND_URL}/verify-bank" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
+          <a href="${process.env.FRONTEND_URL}/verify-bank?applicationId=${applicationId}" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
         </div>`
             : ""
         }
