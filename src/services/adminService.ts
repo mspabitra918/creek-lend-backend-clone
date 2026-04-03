@@ -46,11 +46,11 @@ export async function createAdminUser(
 
 export async function authenticateAdmin(
   email: string,
-  password: string
+  password: string,
 ): Promise<{ user: AdminUser; token: string } | null> {
   const user = await queryOne<AdminUser & { password_hash: string }>(
     "SELECT * FROM admin_users WHERE email = $1 AND is_active = true",
-    [email]
+    [email],
   );
 
   if (!user) return null;
@@ -65,7 +65,7 @@ export async function authenticateAdmin(
   const token = jwt.sign(
     { userId: user.id, email: user.email, role: user.role } as JWTPayload,
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN },
   );
 
   const { password_hash: _, ...safeUser } = user;
@@ -84,25 +84,35 @@ export async function getAdminById(id: string): Promise<AdminUser | null> {
   return queryOne<AdminUser>(
     `SELECT id, email, name, role, is_active, last_login, created_at
      FROM admin_users WHERE id = $1`,
-    [id]
+    [id],
+  );
+}
+
+export async function getAdminByEmail(
+  email: string,
+): Promise<AdminUser | null> {
+  return queryOne<AdminUser>(
+    `SELECT id, email, name, role, is_active, last_login, created_at
+     FROM admin_users WHERE email = $1`,
+    [email],
   );
 }
 
 export async function listAdminUsers(): Promise<AdminUser[]> {
   return query<AdminUser>(
     `SELECT id, email, name, role, is_active, last_login, created_at
-     FROM admin_users ORDER BY created_at DESC`
+     FROM admin_users ORDER BY created_at DESC`,
   );
 }
 
 export async function updateAdminPassword(
   id: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<boolean> {
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   const count = await execute(
     "UPDATE admin_users SET password_hash = $1 WHERE id = $2",
-    [passwordHash, id]
+    [passwordHash, id],
   );
   return count > 0;
 }
@@ -110,7 +120,7 @@ export async function updateAdminPassword(
 export async function deactivateAdmin(id: string): Promise<boolean> {
   const count = await execute(
     "UPDATE admin_users SET is_active = false WHERE id = $1",
-    [id]
+    [id],
   );
   return count > 0;
 }

