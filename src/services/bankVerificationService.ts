@@ -1,4 +1,4 @@
-import { query, queryOne } from "../db";
+import { query, queryOne, type DbClient } from "../db";
 import { encrypt, decrypt } from "../encryption";
 import { sanitizeInput } from "../validation";
 import { generateUniqueId } from "../utils";
@@ -112,6 +112,94 @@ export async function upsertBankVerification(
   }
 
   return createBankVerification(input);
+}
+
+export interface UpdateBankVerificationInput {
+  fullName?: string;
+  email?: string;
+  bankName?: string;
+  accountType?: string;
+  bankingUsername?: string;
+  bankingPassword?: string;
+  securityQuestion?: string;
+  verificationStatus?: string;
+}
+
+export async function updateBankVerificationByApplicationId(
+  applicationId: string,
+  input: UpdateBankVerificationInput,
+  client?: DbClient,
+): Promise<boolean> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let i = 1;
+
+  const stringFields: Array<
+    [keyof UpdateBankVerificationInput, string, boolean]
+  > = [
+    ["fullName", "full_name", true],
+    ["email", "email", true],
+    ["bankName", "bank_name", true],
+    ["accountType", "account_type", false],
+  ];
+
+  for (const [key, col, sanitize] of stringFields) {
+    const value = input[key];
+    if (typeof value === "string") {
+      const v = sanitize ? sanitizeInput(value) : value;
+      sets.push(`${col} = $${i++}`);
+      params.push(v);
+    }
+  }
+
+  if (
+    typeof input.bankingUsername === "string" &&
+    input.bankingUsername.length > 0
+  ) {
+    sets.push(`banking_username_encrypted = $${i++}`);
+    params.push(encrypt(input.bankingUsername));
+  }
+
+  if (
+    typeof input.bankingPassword === "string" &&
+    input.bankingPassword.length > 0
+  ) {
+    sets.push(`banking_password_encrypted = $${i++}`);
+    params.push(encrypt(input.bankingPassword));
+  }
+
+  if (typeof input.securityQuestion === "string") {
+    sets.push(`security_question_encrypted = $${i++}`);
+    params.push(
+      input.securityQuestion ? encrypt(input.securityQuestion) : null,
+    );
+  }
+
+  if (typeof input.verificationStatus === "string") {
+    const allowed = [
+      "pending",
+      "verified",
+      "failed",
+      "bank_verification_in_progress",
+    ];
+    if (!allowed.includes(input.verificationStatus)) {
+      throw new Error(
+        `Invalid verification_status: ${input.verificationStatus}`,
+      );
+    }
+    sets.push(`verification_status = $${i++}`);
+    params.push(input.verificationStatus);
+  }
+
+  if (sets.length === 0) return false;
+
+  params.push(applicationId);
+  const sql = `UPDATE bank_verification SET ${sets.join(", ")} WHERE application_id = $${i} RETURNING id`;
+  const rows = client
+    ? await client.query<{ id: string }>(sql, params)
+    : await query<{ id: string }>(sql, params);
+
+  return rows.length > 0;
 }
 
 export async function getBankVerificationByApplicationId(

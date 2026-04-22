@@ -1,4 +1,4 @@
-import { query, queryOne, execute, transaction } from "../db";
+import { query, queryOne, execute, transaction, type DbClient } from "../db";
 import { encrypt, hashSSN, decrypt } from "../encryption";
 import { sanitizeInput } from "../validation";
 import { generateUniqueId } from "../utils";
@@ -407,6 +407,147 @@ export async function updateApplicationStatus(
   });
 
   return updated;
+}
+
+export interface UpdateApplicationInput {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  ssn?: string;
+  driverLicenseNumber?: string;
+  driverLicenseState?: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  employmentStatus?: string;
+  employerName?: string;
+  jobTitle?: string;
+  monthlyIncome?: number;
+  yearsEmployed?: number;
+  loanAmount?: number;
+  loanPurpose?: string;
+  loanTerm?: number;
+  bankName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  accountType?: string;
+}
+
+export async function updateApplication(
+  id: string,
+  input: UpdateApplicationInput,
+  performedBy: string,
+  client?: DbClient,
+): Promise<boolean> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const changedFields: Record<string, unknown> = {};
+  let i = 1;
+
+  const stringFields: Array<[keyof UpdateApplicationInput, string, boolean]> = [
+    ["firstName", "first_name", true],
+    ["lastName", "last_name", true],
+    ["email", "email", true],
+    ["phone", "phone", true],
+    ["dateOfBirth", "date_of_birth", false],
+    ["driverLicenseState", "dl_state", false],
+    ["streetAddress", "street_address", true],
+    ["city", "city", true],
+    ["state", "state", false],
+    ["zipCode", "zip_code", true],
+    ["country", "country", false],
+    ["employmentStatus", "employment_status", false],
+    ["employerName", "employer_name", true],
+    ["jobTitle", "job_title", true],
+    ["loanPurpose", "loan_purpose", false],
+    ["bankName", "bank_name", true],
+    ["routingNumber", "routing_number", false],
+    ["accountType", "account_type", false],
+  ];
+
+  for (const [key, col, sanitize] of stringFields) {
+    const value = input[key];
+    if (typeof value === "string") {
+      const v = sanitize ? sanitizeInput(value) : value;
+      sets.push(`${col} = $${i++}`);
+      params.push(v);
+      changedFields[col] = v;
+    }
+  }
+
+  const numberFields: Array<[keyof UpdateApplicationInput, string]> = [
+    ["monthlyIncome", "monthly_income"],
+    ["yearsEmployed", "years_employed"],
+    ["loanAmount", "loan_amount"],
+    ["loanTerm", "loan_term"],
+  ];
+
+  for (const [key, col] of numberFields) {
+    const value = input[key];
+    if (typeof value === "number" && !Number.isNaN(value)) {
+      sets.push(`${col} = $${i++}`);
+      params.push(value);
+      changedFields[col] = value;
+    }
+  }
+
+  if (typeof input.ssn === "string" && input.ssn.length > 0) {
+    sets.push(`ssn_encrypted = $${i++}`);
+    params.push(encrypt(input.ssn));
+    sets.push(`ssn_hash = $${i++}`);
+    params.push(hashSSN(input.ssn));
+    changedFields.ssn_encrypted = "[ENCRYPTED]";
+  }
+
+  if (
+    typeof input.driverLicenseNumber === "string" &&
+    input.driverLicenseNumber.length > 0
+  ) {
+    sets.push(`dl_number_encrypted = $${i++}`);
+    params.push(encrypt(input.driverLicenseNumber));
+    changedFields.dl_number_encrypted = "[ENCRYPTED]";
+  }
+
+  if (
+    typeof input.accountNumber === "string" &&
+    input.accountNumber.length > 0
+  ) {
+    sets.push(`account_number_encrypted = $${i++}`);
+    params.push(encrypt(input.accountNumber));
+    changedFields.account_number_encrypted = "[ENCRYPTED]";
+  }
+
+  if (sets.length === 0) return false;
+
+  const run = async (c: DbClient) => {
+    params.push(id);
+    const rows = await c.query<{ id: string }>(
+      `UPDATE loan_applications SET ${sets.join(", ")} WHERE id = $${i} RETURNING id`,
+      params,
+    );
+
+    if (rows.length === 0) return false;
+
+    const auditId = await generateUniqueId("audit_log", "id", c);
+    await c.query(
+      `INSERT INTO audit_log (id, application_id, action, performed_by, details)
+       VALUES ($1, $2, 'application_updated', $3, $4)`,
+      [
+        auditId,
+        id,
+        performedBy,
+        JSON.stringify({ updated_fields: changedFields }),
+      ],
+    );
+
+    return true;
+  };
+
+  return client ? run(client) : transaction(run);
 }
 
 export async function getApplicationStats(): Promise<{

@@ -51,13 +51,15 @@ export async function execute(
   }
 }
 
+export type DbClient = {
+  query: <R = Record<string, unknown>>(
+    text: string,
+    params?: unknown[]
+  ) => Promise<R[]>;
+};
+
 export async function transaction<T>(
-  callback: (client: {
-    query: <R = Record<string, unknown>>(
-      text: string,
-      params?: unknown[]
-    ) => Promise<R[]>;
-  }) => Promise<T>
+  callback: (client: DbClient) => Promise<T>
 ): Promise<T> {
   const client = await pool.connect();
   try {

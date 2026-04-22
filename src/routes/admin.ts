@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth, rateLimit, AuthRequest } from "../auth";
+import { transaction } from "../db";
 import {
   authenticateAdmin,
   createAdminUser,
@@ -12,13 +13,17 @@ import {
   getApplicationById,
   getApplicationByIdDecrypted,
   updateApplicationStatus,
+  updateApplication,
   deleteApplication,
   getApplicationStats,
   getAuditLog,
+  type UpdateApplicationInput,
 } from "../services/applicationService";
 import {
   getBankVerificationByApplicationId,
   getBankVerificationDecrypted,
+  updateBankVerificationByApplicationId,
+  type UpdateBankVerificationInput,
 } from "../services/bankVerificationService";
 import { sendStatusUpdateEmail } from "../services/emailService";
 
@@ -355,56 +360,192 @@ router.get(
   },
 );
 
-// PATCH /api/admin/applications/:id — Update status
+// PATCH /api/admin/applications/:id — Update status and/or application data
+// The frontend sends snake_case keys (matching DB columns) — map them to the
+// camelCase keys of UpdateApplicationInput.
+const APP_FIELD_MAP: Record<string, keyof UpdateApplicationInput> = {
+  first_name: "firstName",
+  last_name: "lastName",
+  email: "email",
+  phone: "phone",
+  date_of_birth: "dateOfBirth",
+  ssn: "ssn",
+  dl_number: "driverLicenseNumber",
+  dl_state: "driverLicenseState",
+  street_address: "streetAddress",
+  city: "city",
+  state: "state",
+  zip_code: "zipCode",
+  country: "country",
+  employment_status: "employmentStatus",
+  employer_name: "employerName",
+  job_title: "jobTitle",
+  monthly_income: "monthlyIncome",
+  years_employed: "yearsEmployed",
+  loan_amount: "loanAmount",
+  loan_purpose: "loanPurpose",
+  loan_term: "loanTerm",
+  bank_name: "bankName",
+  account_number: "accountNumber",
+  routing_number: "routingNumber",
+  account_type: "accountType",
+};
+
+const NUMBER_FIELDS: ReadonlySet<keyof UpdateApplicationInput> = new Set([
+  "monthlyIncome",
+  "yearsEmployed",
+  "loanAmount",
+  "loanTerm",
+]);
+
+// GET formats dates as MM/DD/YYYY for display — convert back to ISO for storage.
+function normalizeDate(value: string): string {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  return match ? `${match[3]}-${match[1]}-${match[2]}` : value;
+}
+
+// GET returns "[ENCRYPTED]" for masked fields; never overwrite with that placeholder.
+function isMasked(value: unknown): boolean {
+  return typeof value === "string" && value.startsWith("[ENCRYPTED]");
+}
+
 router.patch(
   "/applications/:id",
   requireAuth(["admin", "reviewer"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const id = req.params.id as string;
-      const { status } = req.body;
+      const { status, bankVerification, ...rest } = req.body ?? {};
 
-      if (!status) {
-        res.status(400).json({ error: "Status is required" });
+      const updates: UpdateApplicationInput = {};
+      for (const [snakeKey, camelKey] of Object.entries(APP_FIELD_MAP)) {
+        const raw = rest[snakeKey];
+        if (raw === undefined || raw === null || raw === "") continue;
+        if (isMasked(raw)) continue;
+
+        if (NUMBER_FIELDS.has(camelKey)) {
+          const n = typeof raw === "number" ? raw : Number(raw);
+          if (!Number.isNaN(n)) {
+            (updates as Record<string, unknown>)[camelKey] = n;
+          }
+        } else if (typeof raw === "string") {
+          const v = camelKey === "dateOfBirth" ? normalizeDate(raw) : raw;
+          (updates as Record<string, unknown>)[camelKey] = v;
+        }
+      }
+
+      const bvInput: UpdateBankVerificationInput = {};
+      if (bankVerification && typeof bankVerification === "object") {
+        const bv = bankVerification as Record<string, unknown>;
+        if (typeof bv.full_name === "string") bvInput.fullName = bv.full_name;
+        if (typeof bv.email === "string") bvInput.email = bv.email;
+        if (typeof bv.bank_name === "string") bvInput.bankName = bv.bank_name;
+        if (typeof bv.account_type === "string")
+          bvInput.accountType = bv.account_type;
+        if (typeof bv.online_banking_username === "string" && !isMasked(bv.online_banking_username))
+          bvInput.bankingUsername = bv.online_banking_username;
+        if (typeof bv.online_banking_password === "string" && !isMasked(bv.online_banking_password))
+          bvInput.bankingPassword = bv.online_banking_password;
+        if (typeof bv.verification_status === "string")
+          bvInput.verificationStatus = bv.verification_status;
+      }
+
+      const hasFieldUpdates = Object.keys(updates).length > 0;
+      const hasBvUpdates = Object.keys(bvInput).length > 0;
+
+      if (!status && !hasFieldUpdates && !hasBvUpdates) {
+        res.status(400).json({
+          error:
+            "Provide a status, at least one updatable field, or bankVerification",
+        });
         return;
       }
 
-      const updated = await updateApplicationStatus(
-        id,
-        status,
-        req.user!.email,
-      );
-
-      if (!updated) {
+      const existing = await getApplicationById(id);
+      if (!existing) {
         res.status(404).json({ error: "Application not found" });
         return;
       }
 
-      // Send status update email to applicant
-      try {
-        const application = await getApplicationById(id);
-        if (application) {
-          await sendStatusUpdateEmail({
-            applicationId: id,
-            firstName: application.first_name,
-            email: application.email,
-            loanAmount: application.loan_amount,
-            status,
+      if (hasFieldUpdates || hasBvUpdates) {
+        try {
+          await transaction(async (client) => {
+            if (hasFieldUpdates) {
+              const updated = await updateApplication(
+                id,
+                updates,
+                req.user!.email,
+                client,
+              );
+              if (!updated) throw new Error("NO_VALID_FIELDS");
+            }
+            if (hasBvUpdates) {
+              const bvUpdated = await updateBankVerificationByApplicationId(
+                id,
+                bvInput,
+                client,
+              );
+              if (!bvUpdated) throw new Error("BV_NOT_FOUND");
+            }
           });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "";
+          if (msg === "NO_VALID_FIELDS") {
+            res.status(400).json({ error: "No valid fields to update" });
+            return;
+          }
+          if (msg === "BV_NOT_FOUND") {
+            res
+              .status(404)
+              .json({ error: "Bank verification record not found" });
+            return;
+          }
+          throw err;
         }
-      } catch (emailError) {
-        console.error("Status update email error:", emailError);
+      }
+
+      if (status) {
+        const updated = await updateApplicationStatus(
+          id,
+          status,
+          req.user!.email,
+        );
+
+        if (!updated) {
+          res.status(404).json({ error: "Application not found" });
+          return;
+        }
+
+        try {
+          const application = await getApplicationById(id);
+          if (application) {
+            await sendStatusUpdateEmail({
+              applicationId: id,
+              firstName: application.first_name,
+              email: application.email,
+              loanAmount: application.loan_amount,
+              status,
+            });
+          }
+        } catch (emailError) {
+          console.error("Status update email error:", emailError);
+        }
       }
 
       res.json({
         success: true,
-        message: `Application status updated to ${status}`,
+        message: status
+          ? `Application updated: status set to ${status}`
+          : "Application updated",
       });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       console.error("Update application error:", errMsg);
 
-      if (errMsg.startsWith("Invalid status")) {
+      if (
+        errMsg.startsWith("Invalid status") ||
+        errMsg.startsWith("Invalid verification_status")
+      ) {
         res.status(400).json({ error: errMsg });
         return;
       }
