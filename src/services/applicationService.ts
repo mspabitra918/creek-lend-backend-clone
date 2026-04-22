@@ -249,11 +249,49 @@ export async function listApplications(
     params.push(country);
   }
   if (search) {
-    conditions.push(
-      `(first_name ILIKE $${paramIndex} OR last_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR id ILIKE $${paramIndex})`,
-    );
-    params.push(`%${search}%`);
-    paramIndex++;
+    const digitsOnly = search.replace(/\D/g, "");
+    const isNumericSearch =
+      digitsOnly.length > 0 &&
+      search.replace(/[\s\-().+]/g, "") === digitsOnly;
+
+    // 9-digit input → could be SSN. Try all plausible stored formats.
+    if (isNumericSearch && digitsOnly.length === 9) {
+      const formatted = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5)}`;
+      const hashes = Array.from(
+        new Set([hashSSN(digitsOnly), hashSSN(formatted), hashSSN(search)]),
+      );
+      conditions.push(
+        `(ssn_hash = ANY($${paramIndex++}) OR REGEXP_REPLACE(phone, '[^0-9]', '', 'g') ILIKE $${paramIndex++})`,
+      );
+      params.push(hashes);
+      params.push(`%${digitsOnly}%`);
+    } else if (isNumericSearch) {
+      // Phone / ID numeric lookup — strip formatting from stored phone
+      conditions.push(
+        `(REGEXP_REPLACE(phone, '[^0-9]', '', 'g') ILIKE $${paramIndex} OR id::text ILIKE $${paramIndex})`,
+      );
+      params.push(`%${digitsOnly}%`);
+      paramIndex++;
+    } else {
+      // Text search: split by spaces and require all words to match
+      const searchWords = search.split(/\s+/).filter((word) => word.length > 0);
+      if (searchWords.length > 0) {
+        const wordConditions: string[] = [];
+        for (const word of searchWords) {
+          wordConditions.push(
+            `(first_name ILIKE $${paramIndex}
+            OR last_name ILIKE $${paramIndex}
+            OR email ILIKE $${paramIndex}
+            OR phone ILIKE $${paramIndex}
+            OR id::text ILIKE $${paramIndex}
+            OR (first_name || ' ' || last_name) ILIKE $${paramIndex})`,
+          );
+          params.push(`%${word}%`);
+          paramIndex++;
+        }
+        conditions.push(`(${wordConditions.join(" AND ")})`);
+      }
+    }
   }
 
   const whereClause =
