@@ -620,11 +620,14 @@ export async function markBankVerificationCompleted(
 }
 
 export async function deleteApplication(id: string): Promise<boolean> {
-  const rowCount = await execute(
-    "DELETE FROM loan_applications WHERE id = $1",
-    [id],
-  );
-  return rowCount > 0;
+  return transaction(async (client) => {
+    await client.query("DELETE FROM audit_log WHERE application_id = $1", [id]);
+    const rows = await client.query<{ id: string }>(
+      "DELETE FROM loan_applications WHERE id = $1 RETURNING id",
+      [id],
+    );
+    return rows.length > 0;
+  });
 }
 
 export async function getApplicationByIdAndEmail(

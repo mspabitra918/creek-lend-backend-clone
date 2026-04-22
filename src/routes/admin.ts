@@ -485,7 +485,9 @@ router.patch(
                 bvInput,
                 client,
               );
-              if (!bvUpdated) throw new Error("BV_NOT_FOUND");
+              if (!bvUpdated && !hasFieldUpdates) {
+                throw new Error("BV_NOT_FOUND");
+              }
             }
           });
         } catch (err) {
