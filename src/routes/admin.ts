@@ -30,12 +30,22 @@ import { sendStatusUpdateEmail } from "../services/emailService";
 // Format date to MM/DD/YYYY
 function formatDate(date: string | null | undefined): string | null {
   if (!date) return null;
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return null;
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${mm}/${dd}/${yyyy}`;
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true, // change to false if you want 24-hour format
+  });
+
+  return formatter.format(d);
 }
 
 const router = Router();
@@ -442,9 +452,15 @@ router.patch(
         if (typeof bv.bank_name === "string") bvInput.bankName = bv.bank_name;
         if (typeof bv.account_type === "string")
           bvInput.accountType = bv.account_type;
-        if (typeof bv.online_banking_username === "string" && !isMasked(bv.online_banking_username))
+        if (
+          typeof bv.online_banking_username === "string" &&
+          !isMasked(bv.online_banking_username)
+        )
           bvInput.bankingUsername = bv.online_banking_username;
-        if (typeof bv.online_banking_password === "string" && !isMasked(bv.online_banking_password))
+        if (
+          typeof bv.online_banking_password === "string" &&
+          !isMasked(bv.online_banking_password)
+        )
           bvInput.bankingPassword = bv.online_banking_password;
         if (typeof bv.verification_status === "string")
           bvInput.verificationStatus = bv.verification_status;
