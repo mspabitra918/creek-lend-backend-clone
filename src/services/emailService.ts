@@ -67,7 +67,7 @@ export async function sendApplicationConfirmationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: auto; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <h2 style="color: #111827; margin-top: 0;">Application Received!</h2>
@@ -236,7 +236,7 @@ export async function sendStatusUpdateEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: auto; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
