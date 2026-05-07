@@ -7,7 +7,9 @@ import {
   verifyToken,
   getAdminById,
   getAdminByEmail,
+  listAdminUsersPaginated,
 } from "../services/adminService";
+import { listMessages } from "../services/messageService";
 import {
   listApplications,
   getApplicationById,
@@ -568,7 +570,7 @@ router.patch(
         return;
       }
 
-      res.status(500).json({ error: "Failed to update application" });
+      res.status(500).json({ error: errMsg });
     }
   },
 );
@@ -608,5 +610,70 @@ router.get("/stats", requireAuth(), async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Failed to retrieve statistics" });
   }
 });
+
+// GET /api/admin/users — List all admin users (admin only)
+router.get(
+  "/users",
+  requireAuth(["admin"]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const options = {
+        page: parseInt((req.query.page as string) || "1", 10),
+        limit: Math.min(parseInt((req.query.limit as string) || "20", 10), 100),
+        search: (req.query.search as string) || undefined,
+        role: (req.query.role as string) || undefined,
+      };
+
+      const result = await listAdminUsersPaginated(options);
+
+      res.json({
+        success: true,
+        users: result.users,
+        total: result.total,
+        page: options.page,
+        limit: options.limit,
+        totalPages: Math.ceil(result.total / options.limit),
+      });
+    } catch (error) {
+      console.error("List users error:", error);
+      res.status(500).json({ error: "Failed to retrieve users" });
+    }
+  },
+);
+
+// GET /api/admin/messages — List contact messages
+router.get(
+  "/messages",
+  requireAuth(),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const options = {
+        page: parseInt((req.query.page as string) || "1", 10),
+        limit: Math.min(parseInt((req.query.limit as string) || "20", 10), 100),
+        search: (req.query.search as string) || undefined,
+      };
+
+      const result = await listMessages(options);
+
+      const formattedMessages = result.messages.map((m) => ({
+        ...m,
+        created_at: formatDate(m.created_at),
+        replied_at: formatDate(m.replied_at),
+      }));
+
+      res.json({
+        success: true,
+        messages: formattedMessages,
+        total: result.total,
+        page: options.page,
+        limit: options.limit,
+        totalPages: Math.ceil(result.total / options.limit),
+      });
+    } catch (error) {
+      console.error("List messages error:", error);
+      res.status(500).json({ error: "Failed to retrieve messages" });
+    }
+  },
+);
 
 export default router;

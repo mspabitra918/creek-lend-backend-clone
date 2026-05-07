@@ -105,6 +105,60 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
   );
 }
 
+export interface ListAdminUsersOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+}
+
+export async function listAdminUsersPaginated(
+  options: ListAdminUsersOptions,
+): Promise<{
+  users: AdminUser[];
+  total: number;
+}> {
+  const page = options.page || 1;
+  const limit = options.limit || 20;
+  const offset = (page - 1) * limit;
+  const search = options.search || "";
+  const role = options.role || "";
+  const whereClauses: string[] = [];
+  const params: any[] = [];
+
+  if (search) {
+    params.push(`%${search}%`);
+    whereClauses.push(`(email ILIKE $${params.length} OR name ILIKE $${params.length})`);
+  }
+
+  if (role) {
+    params.push(role);
+    whereClauses.push(`role = $${params.length}`);
+  }
+
+  const whereClause =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const countParams = [...params];
+  const totalResult = await queryOne<{ count: string }>(
+    `SELECT COUNT(*) FROM admin_users ${whereClause}`,
+    countParams,
+  );
+  const total = parseInt(totalResult?.count || "0", 10);
+
+  const queryParams = [...params, limit, offset];
+  const users = await query<AdminUser>(
+    `SELECT id, email, name, role, is_active, last_login, created_at
+     FROM admin_users
+     ${whereClause}
+     ORDER BY created_at DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    queryParams,
+  );
+
+  return { users, total };
+}
+
 export async function updateAdminPassword(
   id: string,
   newPassword: string,
