@@ -47,13 +47,17 @@ export async function createAdminUser(
 export async function authenticateAdmin(
   email: string,
   password: string,
-): Promise<{ user: AdminUser; token: string } | null> {
+): Promise<{ user: AdminUser; token: string; error?: string } | null> {
   const user = await queryOne<AdminUser & { password_hash: string }>(
-    "SELECT * FROM admin_users WHERE email = $1 AND is_active = true",
+    "SELECT * FROM admin_users WHERE email = $1",
     [email],
   );
 
   if (!user) return null;
+
+  if (!user.is_active) {
+    return { user: null as any, token: null as any, error: "Account is deactivated" };
+  }
 
   const validPassword = await bcrypt.compare(password, user.password_hash);
   if (!validPassword) return null;
@@ -173,7 +177,7 @@ export async function updateAdminPassword(
 
 export async function deactivateAdmin(id: string): Promise<boolean> {
   const count = await execute(
-    "UPDATE admin_users SET is_active = false WHERE id = $1",
+    "UPDATE admin_users SET is_active = false, updated_at = NOW() WHERE id = $1",
     [id],
   );
   return count > 0;

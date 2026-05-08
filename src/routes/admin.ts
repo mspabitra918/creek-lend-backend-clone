@@ -8,6 +8,7 @@ import {
   getAdminById,
   getAdminByEmail,
   listAdminUsersPaginated,
+  deactivateAdmin,
 } from "../services/adminService";
 import { listMessages } from "../services/messageService";
 import {
@@ -100,6 +101,11 @@ router.post("/auth", async (req: Request, res: Response) => {
     const result = await authenticateAdmin(email, password);
     if (!result) {
       res.status(401).json({ error: "Invalid email or password" });
+      return;
+    }
+
+    if (result.error) {
+      res.status(403).json({ error: result.error });
       return;
     }
 
@@ -641,6 +647,94 @@ router.get(
   },
 );
 
+// DELETE /api/admin/users/${userId}/deactivate — Deactivate an admin user (admin only)
+router.put(
+  "/users/:id/deactivate",
+  requireAuth(["admin"]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const user = await getAdminById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found",
+        });
+      }
+
+      // Deactivate account instead of deleting
+      await transaction(async (client) => {
+        await client.query(
+          `
+          UPDATE admin_users
+          SET 
+            is_active = false,
+            updated_at = NOW()
+          WHERE id = $1
+          `,
+          [id],
+        );
+      });
+
+      return res.json({
+        success: true,
+        message: "User deactivated successfully",
+      });
+    } catch (error) {
+      console.error("Deactivate user error:", error);
+
+      return res.status(500).json({
+        error: "Failed to deactivate user",
+      });
+    }
+  },
+);
+
+// PUT /api/admin/users/${userId}/activate — Activate an admin user (admin only)
+router.put(
+  "/users/:id/activate",
+  requireAuth(["admin"]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const user = await getAdminById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found",
+        });
+      }
+
+      // Activate account instead of deleting
+      await transaction(async (client) => {
+        await client.query(
+          `
+          UPDATE admin_users
+          SET 
+            is_active = true,
+            updated_at = NOW()
+          WHERE id = $1
+          `,
+          [id],
+        );
+      });
+
+      return res.json({
+        success: true,
+        message: "User activated successfully",
+      });
+    } catch (error) {
+      console.error("Activate user error:", error);
+
+      return res.status(500).json({
+        error: "Failed to activate user",
+      });
+    }
+  },
+);
+
 // GET /api/admin/messages — List contact messages
 router.get(
   "/messages",
@@ -672,6 +766,53 @@ router.get(
     } catch (error) {
       console.error("List messages error:", error);
       res.status(500).json({ error: "Failed to retrieve messages" });
+    }
+  },
+);
+
+router.delete(
+  "/auth/delete",
+  requireAuth(),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: "Not authenticated",
+        });
+      }
+
+      const user = await getAdminById(req.user.userId);
+
+      if (!user) {
+        return res.status(404).json({
+          error: "User not found",
+        });
+      }
+
+      // Deactivate account instead of deleting
+      await transaction(async (client) => {
+        await client.query(
+          `
+          UPDATE admin_users
+          SET 
+            is_active = false,
+            updated_at = NOW()
+          WHERE id = $1
+          `,
+          [req?.user?.userId],
+        );
+      });
+
+      return res.json({
+        success: true,
+        message: "Account deactivated successfully",
+      });
+    } catch (error) {
+      console.error("Deactivate account error:", error);
+
+      return res.status(500).json({
+        error: "Failed to deactivate account",
+      });
     }
   },
 );
