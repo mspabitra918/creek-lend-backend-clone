@@ -653,7 +653,7 @@ router.put(
   requireAuth(["admin"]),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
 
       const user = await getAdminById(id);
 
@@ -697,7 +697,7 @@ router.put(
   requireAuth(["admin"]),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
 
       const user = await getAdminById(id);
 
