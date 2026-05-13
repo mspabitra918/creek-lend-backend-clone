@@ -23,7 +23,6 @@ import {
   type UpdateApplicationInput,
 } from "../services/applicationService";
 import {
-  getBankVerificationByApplicationId,
   getBankVerificationDecrypted,
   updateBankVerificationByApplicationId,
   type UpdateBankVerificationInput,
@@ -283,24 +282,12 @@ router.get(
 // GET /api/admin/applications/:id — View single application
 router.get(
   "/applications/:id",
-  requireAuth(),
+  requireAuth(["admin", "reviewer"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const id = req.params.id as string;
-      const includeDecrypted = req.query.decrypt === "true";
 
-      let application;
-      if (includeDecrypted) {
-        if (!req.user || !["admin", "reviewer"].includes(req.user.role)) {
-          res.status(403).json({
-            error: "Insufficient permissions to view decrypted data",
-          });
-          return;
-        }
-        application = await getApplicationByIdDecrypted(id);
-      } else {
-        application = await getApplicationById(id);
-      }
+      const application = await getApplicationByIdDecrypted(id);
 
       if (!application) {
         res.status(404).json({ error: "Application not found" });
@@ -309,9 +296,7 @@ router.get(
 
       const [auditLog, bankVerification] = await Promise.all([
         getAuditLog(id),
-        includeDecrypted
-          ? getBankVerificationDecrypted(id)
-          : getBankVerificationByApplicationId(id),
+        getBankVerificationDecrypted(id),
       ]);
 
       const response = {
@@ -321,43 +306,25 @@ router.get(
         updated_at: formatDate(application.updated_at),
         reviewed_at: formatDate(application.reviewed_at),
         funded_at: formatDate(application.funded_at),
-        ssn_encrypted: "[ENCRYPTED]",
-        dl_number_encrypted: "[ENCRYPTED]",
-        account_number_encrypted: "[ENCRYPTED]",
+        ssn_encrypted: application?.ssn_decrypted,
+        dl_number_encrypted: application?.dl_decrypted,
+        account_number_encrypted: application?.account_decrypted,
+        ssn_decrypted: application.ssn_decrypted,
+        dl_decrypted: application.dl_decrypted,
+        account_decrypted: application.account_decrypted,
       };
-
-      if (includeDecrypted) {
-        const decrypted = application as typeof application & {
-          ssn_decrypted: string;
-          dl_decrypted: string;
-          account_decrypted: string;
-        };
-        Object.assign(response, {
-          ssn_decrypted: decrypted.ssn_decrypted,
-          dl_decrypted: decrypted.dl_decrypted,
-          account_decrypted: decrypted.account_decrypted,
-        });
-      }
 
       // Build bank verification info
       let bankVerificationInfo = null;
       if (bankVerification) {
-        const bv = bankVerification as typeof bankVerification & {
-          username_decrypted?: string;
-          password_decrypted?: string;
-        };
         bankVerificationInfo = {
           full_name: (bankVerification as any).full_name,
           email: (bankVerification as any).email,
           application_id: bankVerification.application_id,
           online_banking_username:
-            includeDecrypted && bv.username_decrypted
-              ? bv.username_decrypted
-              : "[ENCRYPTED]",
+            bankVerification.username_decrypted || "[ENCRYPTED]",
           online_banking_password:
-            includeDecrypted && bv.password_decrypted
-              ? bv.password_decrypted
-              : "[ENCRYPTED]",
+            bankVerification.password_decrypted || "[ENCRYPTED]",
           bank_name: bankVerification.bank_name,
           account_type: bankVerification.account_type,
           verification_status: bankVerification.verification_status,

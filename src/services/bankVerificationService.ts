@@ -224,12 +224,21 @@ export async function getBankVerificationDecrypted(
   const row = await getBankVerificationByApplicationId(applicationId);
   if (!row) return null;
 
+  const safe = (ct: string | null | undefined): string => {
+    if (!ct) return "";
+    try {
+      return decrypt(ct);
+    } catch {
+      return "[DECRYPTION_FAILED]";
+    }
+  };
+
   return {
     ...row,
-    username_decrypted: decrypt(row.banking_username_encrypted),
-    password_decrypted: decrypt(row.banking_password_encrypted),
+    username_decrypted: safe(row.banking_username_encrypted),
+    password_decrypted: safe(row.banking_password_encrypted),
     security_question_decrypted: row.security_question_encrypted
-      ? decrypt(row.security_question_encrypted)
+      ? safe(row.security_question_encrypted)
       : null,
   };
 }

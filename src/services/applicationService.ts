@@ -185,6 +185,15 @@ export async function getApplication(
   );
 }
 
+function safeDecrypt(ciphertext: string | null | undefined): string {
+  if (!ciphertext) return "";
+  try {
+    return decrypt(ciphertext);
+  } catch {
+    return "[DECRYPTION_FAILED]";
+  }
+}
+
 export async function getApplicationByIdDecrypted(id: string): Promise<
   | (ApplicationRow & {
       ssn_decrypted: string;
@@ -198,9 +207,9 @@ export async function getApplicationByIdDecrypted(id: string): Promise<
 
   return {
     ...app,
-    ssn_decrypted: decrypt(app.ssn_encrypted),
-    dl_decrypted: decrypt(app.dl_number_encrypted),
-    account_decrypted: decrypt(app.account_number_encrypted),
+    ssn_decrypted: safeDecrypt(app.ssn_encrypted),
+    dl_decrypted: safeDecrypt(app.dl_number_encrypted),
+    account_decrypted: safeDecrypt(app.account_number_encrypted),
   };
 }
 
