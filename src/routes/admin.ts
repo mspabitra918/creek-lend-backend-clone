@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { Parser } from "json2csv";
 import { requireAuth, rateLimit, AuthRequest } from "../auth";
 import { transaction } from "../db";
 import {
@@ -787,106 +786,113 @@ router.delete(
   },
 );
 
+function csvCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
 // GET /api/admin/export-applications — Get all applications without pagination (admin only, use for CSV export)
 router.get(
   "/export-applications",
   requireAuth(["admin", "reviewer"]),
-  async (req: AuthRequest, res: Response) => {
+  async (_req: AuthRequest, res: Response) => {
+    const fields = [
+      "id",
+      "first_name",
+      "email",
+      "phone",
+      "date_of_birth",
+      "ssn",
+      "dl_number",
+      "dl_state",
+      "street_address",
+      "city",
+      "state",
+      "zip_code",
+      "country",
+      "employment_status",
+      "employer_name",
+      "job_title",
+      "monthly_income",
+      "years_employed",
+      "loan_amount",
+      "loan_term",
+      "bank_name",
+      "account_number",
+      "routing_number",
+      "account_type",
+      "status",
+      "bank_verification_completed",
+      "banking_username",
+      "banking_password",
+      "verification_status",
+      "assisted_by_loan_agent",
+      "created_at",
+      "updated_at",
+      "reviewed_at",
+      "funded_at",
+    ];
+
     try {
       const applications = await listAllApplications();
 
-      const formattedApplications = applications.map((app) => ({
-        id: app?.id ?? null,
-        first_name: app?.first_name ?? null,
-        email: app?.email ?? null,
-        phone: app?.phone ?? null,
-        date_of_birth: formatDate(app?.date_of_birth),
-        ssn: app?.ssn_decrypted ?? null,
-        dl_number: app?.dl_decrypted ?? null,
-        dl_state: app?.dl_state ?? null,
-        street_address: app?.street_address ?? null,
-        city: app?.city ?? null,
-        state: app?.state ?? null,
-        zip_code: app?.zip_code ?? null,
-        country: app?.country ?? null,
-        employment_status: app?.employment_status ?? null,
-        employer_name: app?.employer_name ?? null,
-        job_title: app?.job_title ?? null,
-        monthly_income: app?.monthly_income ?? null,
-        years_employed: app?.years_employed ?? null,
-        loan_amount: app?.loan_amount ?? null,
-        loan_term: app?.loan_term ?? null,
-        bank_name: app?.bank_name ?? null,
-        account_number: app?.account_decrypted ?? null,
-        routing_number: app?.routing_number ?? null,
-        account_type: app?.account_type ?? null,
-        status: app?.status ?? null,
-        bank_verification_completed: app?.bank_verification_completed ?? null,
-        banking_username:
-          app?.bank_verification?.banking_username_decrypted ?? null,
-        banking_password:
-          app?.bank_verification?.banking_password_decrypted ?? null,
-        verification_status: app?.bank_verification?.verification_status ?? null,
-        assisted_by_loan_agent: app?.assisted_by_loan_agent ?? null,
-        created_at: formatDate(app?.created_at),
-        updated_at: formatDate(app?.updated_at),
-        reviewed_at: formatDate(app?.reviewed_at),
-        funded_at: formatDate(app?.funded_at),
-      }));
-
-      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=applications.csv",
       );
 
-      const fields = [
-        "id",
-        "first_name",
-        "email",
-        "phone",
-        "date_of_birth",
-        "ssn",
-        "dl_number",
-        "dl_state",
-        "street_address",
-        "city",
-        "state",
-        "zip_code",
-        "country",
-        "employment_status",
-        "employer_name",
-        "job_title",
-        "monthly_income",
-        "years_employed",
-        "loan_amount",
-        "loan_term",
-        "bank_name",
-        "account_number",
-        "routing_number",
-        "account_type",
-        "status",
-        "bank_verification_completed",
-        "banking_username",
-        "banking_password",
-        "verification_status",
-        "assisted_by_loan_agent",
-        "created_at",
-        "updated_at",
-        "reviewed_at",
-        "funded_at",
-      ];
+      res.write(fields.join(",") + "\n");
 
-      if (formattedApplications.length === 0) {
-        return res.send(fields.join(",") + "\n");
+      for (const app of applications) {
+        const row = [
+          app?.id,
+          app?.first_name,
+          app?.email,
+          app?.phone,
+          formatDate(app?.date_of_birth),
+          app?.ssn_decrypted,
+          app?.dl_decrypted,
+          app?.dl_state,
+          app?.street_address,
+          app?.city,
+          app?.state,
+          app?.zip_code,
+          app?.country,
+          app?.employment_status,
+          app?.employer_name,
+          app?.job_title,
+          app?.monthly_income,
+          app?.years_employed,
+          app?.loan_amount,
+          app?.loan_term,
+          app?.bank_name,
+          app?.account_decrypted,
+          app?.routing_number,
+          app?.account_type,
+          app?.status,
+          app?.bank_verification_completed,
+          app?.bank_verification?.banking_username_decrypted,
+          app?.bank_verification?.banking_password_decrypted,
+          app?.bank_verification?.verification_status,
+          app?.assisted_by_loan_agent,
+          formatDate(app?.created_at),
+          formatDate(app?.updated_at),
+          formatDate(app?.reviewed_at),
+          formatDate(app?.funded_at),
+        ];
+        res.write(row.map(csvCell).join(",") + "\n");
       }
 
-      const parser = new Parser({ fields });
-      const csv = parser.parse(formattedApplications);
-
-      return res.send(csv);
+      return res.end();
     } catch (error) {
       console.error("CSV export failed:", error);
+
+      if (res.headersSent) {
+        return res.end();
+      }
 
       return res.status(500).json({
         error: "CSV export failed",
