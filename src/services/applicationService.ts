@@ -133,13 +133,13 @@ export interface ApplicationRowExport {
   reviewed_at: string | null;
   funded_at: string | null;
   bank_verification_completed: string;
-  ssn_decrypted: string;
-  dl_decrypted: string;
-  account_decrypted: string;
+  ssn_decrypted: string | null;
+  dl_decrypted: string | null;
+  account_decrypted: string | null;
   verification_status: string;
   bank_verification: {
-    banking_username_decrypted: string;
-    banking_password_decrypted: string;
+    banking_username_decrypted: string | null;
+    banking_password_decrypted: string | null;
     verification_status: string;
   };
 }
@@ -247,20 +247,21 @@ export async function getApplication(
   );
 }
 
-function safeDecrypt(ciphertext: string | null | undefined): string {
-  if (!ciphertext) return "";
+function safeDecrypt(ciphertext: string | null | undefined): string | null {
+  if (!ciphertext) return null;
   try {
     return decrypt(ciphertext);
-  } catch {
-    return "[DECRYPTION_FAILED]";
+  } catch (error) {
+    console.error("safeDecrypt failed:", error);
+    return null;
   }
 }
 
 export async function getApplicationByIdDecrypted(id: string): Promise<
   | (ApplicationRow & {
-      ssn_decrypted: string;
-      dl_decrypted: string;
-      account_decrypted: string;
+      ssn_decrypted: string | null;
+      dl_decrypted: string | null;
+      account_decrypted: string | null;
     })
   | null
 > {
@@ -420,18 +421,20 @@ export async function listAllApplications() {
       const bankData = bankMap.get(app.id);
       return {
         ...app,
-        ssn_decrypted: safeDecrypt(app.ssn_encrypted),
-        dl_decrypted: safeDecrypt(app.dl_number_encrypted),
-        account_decrypted: safeDecrypt(app.account_number_encrypted),
+        ssn_decrypted: app ? safeDecrypt(app.ssn_encrypted) : null,
+        dl_decrypted: app ? safeDecrypt(app.dl_number_encrypted) : null,
+        account_decrypted: app
+          ? safeDecrypt(app.account_number_encrypted)
+          : null,
 
         bank_verification: {
           verification_status: bankData?.verification_status,
           banking_username_decrypted: bankData
             ? safeDecrypt(bankData.banking_username_encrypted)
-            : "",
+            : null,
           banking_password_decrypted: bankData
             ? safeDecrypt(bankData.banking_password_encrypted)
-            : "",
+            : null,
         },
       };
     }) as ApplicationRowExport[];

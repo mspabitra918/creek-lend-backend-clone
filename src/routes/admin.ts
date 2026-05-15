@@ -832,22 +832,26 @@ router.get(
         funded_at: formatDate(app.funded_at),
       }));
 
-      const parser = new Parser();
-      const csv = parser.parse(formattedApplications);
-
       res.setHeader("Content-Type", "text/csv");
-
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=applications.csv",
       );
 
+      if (formattedApplications.length === 0) {
+        return res.send("");
+      }
+
+      const parser = new Parser();
+      const csv = parser.parse(formattedApplications);
+
       return res.send(csv);
     } catch (error) {
-      console.error(error);
+      console.error("CSV export failed:", error);
 
       return res.status(500).json({
         error: "CSV export failed",
+        detail: error instanceof Error ? error.message : String(error),
       });
     }
   },
