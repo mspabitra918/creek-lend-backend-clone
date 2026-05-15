@@ -251,8 +251,7 @@ function safeDecrypt(ciphertext: string | null | undefined): string | null {
   if (!ciphertext) return null;
   try {
     return decrypt(ciphertext);
-  } catch (error) {
-    console.error("safeDecrypt failed:", error);
+  } catch {
     return null;
   }
 }
