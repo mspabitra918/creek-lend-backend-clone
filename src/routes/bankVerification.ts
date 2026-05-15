@@ -4,6 +4,7 @@ import { upsertBankVerification } from "../services/bankVerificationService";
 import {
   getApplicationById,
   updateApplicationStatus,
+  markBankVerificationUploaded,
 } from "../services/applicationService";
 import { sendDiscordNotification } from "../services/discordService";
 import { email } from "zod";
@@ -117,6 +118,15 @@ router.post("/", async (req: Request, res: Response) => {
         .status(500)
         .json({ error: "Failed to save bank verification. Please try again." });
       return;
+    }
+
+    try {
+      await markBankVerificationUploaded(body.applicationId);
+    } catch (flagError) {
+      console.warn(
+        "Failed to set bank_verification_completed flag:",
+        flagError,
+      );
     }
 
     // Auto-update application status to bank_verification_in_progress

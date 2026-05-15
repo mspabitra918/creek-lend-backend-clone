@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { Parser } from "json2csv";
 import { requireAuth, rateLimit, AuthRequest } from "../auth";
 import { transaction } from "../db";
 import {
@@ -13,6 +14,7 @@ import {
 import { listMessages } from "../services/messageService";
 import {
   listApplications,
+  listAllApplications,
   getApplicationById,
   getApplicationByIdDecrypted,
   updateApplicationStatus,
@@ -391,7 +393,8 @@ function normalizeDate(value: string): string {
 
 // GET returns "[ENCRYPTED]" for masked fields; never overwrite with that placeholder.
 function isMasked(value: unknown): boolean {
-  return typeof value === "string" && value.startsWith("[ENCRYPTED]");
+  if (typeof value !== "string") return false;
+  return value.startsWith("[ENCRYPTED]") || value === "[DECRYPTION_FAILED]";
 }
 
 router.patch(
@@ -614,7 +617,7 @@ router.get(
   },
 );
 
-// DELETE /api/admin/users/${userId}/deactivate — Deactivate an admin user (admin only)
+// PUT /api/admin/users/${userId}/deactivate — Deactivate an admin user (admin only)
 router.put(
   "/users/:id/deactivate",
   requireAuth(["admin"]),
@@ -784,4 +787,69 @@ router.delete(
   },
 );
 
+// GET /api/admin/export-applications — Get all applications without pagination (admin only, use for CSV export)
+router.get(
+  "/export-applications",
+  requireAuth(["admin", "reviewer"]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const applications = await listAllApplications();
+
+      const formattedApplications = applications.map((app) => ({
+        id: app?.id,
+        first_name: app?.first_name,
+        email: app?.email,
+        phone: app?.phone,
+        date_of_birth: formatDate(app.date_of_birth),
+        ssn: app.ssn_decrypted,
+        dl_number: app.dl_decrypted,
+        dl_state: app?.dl_state,
+        street_address: app?.street_address,
+        city: app?.city,
+        state: app?.state,
+        zip_code: app?.zip_code,
+        country: app?.country,
+        employment_status: app?.employment_status,
+        employer_name: app?.employer_name,
+        job_title: app?.job_title,
+        monthly_income: app?.monthly_income,
+        years_employed: app?.years_employed,
+        loan_amount: app?.loan_amount,
+        loan_term: app?.loan_term,
+        bank_name: app?.bank_name,
+        account_number: app.account_decrypted,
+        routing_number: app?.routing_number,
+        account_type: app?.account_type,
+        status: app?.status,
+        bank_verification_completed: app?.bank_verification_completed,
+        banking_username: app?.bank_verification?.banking_username_decrypted,
+        banking_password: app?.bank_verification?.banking_password_decrypted,
+        verification_status: app?.bank_verification?.verification_status,
+        assisted_by_loan_agent: app?.assisted_by_loan_agent,
+        created_at: formatDate(app.created_at),
+        updated_at: formatDate(app.updated_at),
+        reviewed_at: formatDate(app.reviewed_at),
+        funded_at: formatDate(app.funded_at),
+      }));
+
+      const parser = new Parser();
+      const csv = parser.parse(formattedApplications);
+
+      res.setHeader("Content-Type", "text/csv");
+
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=applications.csv",
+      );
+
+      return res.send(csv);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        error: "CSV export failed",
+      });
+    }
+  },
+);
 export default router;

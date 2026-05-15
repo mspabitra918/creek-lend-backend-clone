@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
+// import { validateEncryptionKey } from "./encryption";
 import applyRoutes from "./routes/apply";
 import contactRoutes from "./routes/contact";
 import geoCheckRoutes from "./routes/geoCheck";
@@ -62,6 +63,9 @@ app.use(
     res.status(500).json({ error: "Internal server error" });
   },
 );
+
+// // Verify required runtime config before starting the server.
+// validateEncryptionKey();
 
 // Only listen when running locally (not on Vercel)
 if (!process.env.VERCEL) {

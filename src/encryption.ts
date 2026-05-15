@@ -15,7 +15,7 @@ function deriveKey(salt: Buffer): Buffer {
     salt,
     ITERATIONS,
     KEY_LENGTH,
-    "sha512"
+    "sha512",
   );
 }
 
@@ -49,7 +49,7 @@ export function decrypt(ciphertext: string): string {
   const iv = data.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
   const tag = data.subarray(
     SALT_LENGTH + IV_LENGTH,
-    SALT_LENGTH + IV_LENGTH + TAG_LENGTH
+    SALT_LENGTH + IV_LENGTH + TAG_LENGTH,
   );
   const encrypted = data.subarray(SALT_LENGTH + IV_LENGTH + TAG_LENGTH);
 
@@ -59,6 +59,21 @@ export function decrypt(ciphertext: string): string {
 
   return decipher.update(encrypted) + decipher.final("utf8");
 }
+
+// export function validateEncryptionKey(): void {
+//   if (!ENCRYPTION_KEY) {
+//     throw new Error("ENCRYPTION_KEY environment variable is not set");
+//   }
+// }
+
+// export function safeDecrypt(ciphertext: string | null | undefined): string {
+//   if (!ciphertext) return "";
+//   try {
+//     return decrypt(ciphertext);
+//   } catch {
+//     return "[DECRYPTION_FAILED]";
+//   }
+// }
 
 export function hashSSN(ssn: string): string {
   return crypto

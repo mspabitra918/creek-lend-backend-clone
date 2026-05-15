@@ -88,6 +88,68 @@ export interface ApplicationRow {
   funded_at: string | null;
   bank_verification_completed: string;
 }
+export interface ApplicationRowExport {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  date_of_birth: string;
+  ssn_encrypted: string;
+  ssn_hash: string;
+  dl_number_encrypted: string;
+  dl_state: string;
+  street_address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  country: string;
+  employment_status: string;
+  employer_name: string;
+  job_title: string;
+  monthly_income: number;
+  years_employed: number;
+  loan_amount: number;
+  loan_purpose: string;
+  loan_term: number;
+  bank_name: string;
+  account_number_encrypted: string;
+  routing_number: string;
+  account_type: string;
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_content: string;
+  assisted_by_loan_agent: string;
+  tcpa_consent: boolean;
+  privacy_consent: boolean;
+  credit_check_consent: boolean;
+  ip_address: string;
+  user_agent: string;
+  lead_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  reviewed_at: string | null;
+  funded_at: string | null;
+  bank_verification_completed: string;
+  ssn_decrypted: string;
+  dl_decrypted: string;
+  account_decrypted: string;
+  verification_status: string;
+  bank_verification: {
+    banking_username_decrypted: string;
+    banking_password_decrypted: string;
+    verification_status: string;
+  };
+}
+
+export interface ApplicationBank {
+  application_id: string;
+  banking_username_encrypted: string;
+  banking_password_encrypted: string;
+  verification_status: string;
+}
 
 export async function createApplication(
   input: CreateApplicationInput,
@@ -260,8 +322,7 @@ export async function listApplications(
   if (search) {
     const digitsOnly = search.replace(/\D/g, "");
     const isNumericSearch =
-      digitsOnly.length > 0 &&
-      search.replace(/[\s\-().+]/g, "") === digitsOnly;
+      digitsOnly.length > 0 && search.replace(/[\s\-().+]/g, "") === digitsOnly;
 
     // 9-digit input → could be SSN. Try all plausible stored formats.
     if (isNumericSearch && digitsOnly.length === 9) {
@@ -341,6 +402,45 @@ export async function listApplications(
   };
 }
 
+export async function listAllApplications() {
+  try {
+    const apps = await query<ApplicationRow>(
+      `SELECT * FROM loan_applications ORDER BY created_at DESC`,
+    );
+    const bankRecords = await query<ApplicationBank>(
+      `SELECT application_id, banking_username_encrypted, banking_password_encrypted, verification_status FROM bank_verification`,
+    );
+
+    const bankMap = new Map<string, ApplicationBank>();
+    bankRecords.forEach((record) => {
+      bankMap.set(record.application_id, record);
+    });
+
+    return apps.map((app) => {
+      const bankData = bankMap.get(app.id);
+      return {
+        ...app,
+        ssn_decrypted: safeDecrypt(app.ssn_encrypted),
+        dl_decrypted: safeDecrypt(app.dl_number_encrypted),
+        account_decrypted: safeDecrypt(app.account_number_encrypted),
+
+        bank_verification: {
+          verification_status: bankData?.verification_status,
+          banking_username_decrypted: bankData
+            ? safeDecrypt(bankData.banking_username_encrypted)
+            : "",
+          banking_password_decrypted: bankData
+            ? safeDecrypt(bankData.banking_password_encrypted)
+            : "",
+        },
+      };
+    }) as ApplicationRowExport[];
+  } catch (error) {
+    console.error("Error listing all applications:", error);
+    throw error;
+  }
+}
+
 export async function updateApplicationStatus(
   id: string,
   status: string,
@@ -416,6 +516,19 @@ export async function updateApplicationStatus(
   });
 
   return updated;
+}
+
+export async function markBankVerificationUploaded(
+  id: string,
+): Promise<boolean> {
+  const rows = await query<{ id: string }>(
+    `UPDATE loan_applications
+     SET bank_verification_completed = TRUE
+     WHERE id = $1
+     RETURNING id`,
+    [id],
+  );
+  return rows.length > 0;
 }
 
 export interface UpdateApplicationInput {
