@@ -8,6 +8,7 @@ import {
 import { trackLeadEvent } from "../services/metaCapi";
 import { sendApplicationConfirmationEmail } from "../services/emailService";
 import { sendDiscordNotification } from "../services/discordService";
+import { enqueueDripSequence } from "../queue/dripQueue";
 
 const router = Router();
 
@@ -114,6 +115,11 @@ router.post("/", async (req: Request, res: Response) => {
     } catch (err) {
       console.error("Email send error:", err);
     }
+
+    // Start the bank-verification drip sequence. New applications begin in
+    // `bank_verification_pending`; enqueueDripSequence never throws so a queue
+    // outage cannot block submission.
+    await enqueueDripSequence(applicationId, new Date());
 
     // Send Discord notification
     try {

@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'deposit_in_progress', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'deposit_in_progress', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -80,13 +80,13 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS assisted_by_loan_agent VA
 -- Update status constraint for existing databases (add bank_verification_in_progress)
 ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;
 ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
-    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded'));
+    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed'));
 
 -- Update bank_verification column size and constraint for existing databases
 ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);
 ALTER TABLE bank_verification DROP CONSTRAINT IF EXISTS bank_verification_verification_status_check;
 ALTER TABLE bank_verification ADD CONSTRAINT bank_verification_verification_status_check
-    CHECK (verification_status IN ('pending', 'verified', 'failed', 'bank_verification_in_progress'));
+    CHECK (verification_status IN ('pending', 'verified', 'failed', 'bank_verification_in_progress', 'bank_verification_completed'));
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_applications_email ON loan_applications(email);
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS bank_verification (
     user_agent TEXT DEFAULT '',
 
     -- Status
-    verification_status VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed' ,'bank_verification_in_progress')),
+    verification_status VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'failed' ,'bank_verification_in_progress', 'bank_verification_completed')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -176,6 +176,20 @@ CREATE TABLE IF NOT EXISTS bank_verification (
 
 CREATE INDEX IF NOT EXISTS idx_bank_verification_application ON bank_verification(application_id);
 CREATE INDEX IF NOT EXISTS idx_bank_verification_status ON bank_verification(verification_status);
+
+-- Bank-Verification Drip Email Log
+-- One row per drip email actually delivered. Provides idempotency (a job can only
+-- send a given email once) and observability for the BullMQ-driven sequence.
+CREATE TABLE IF NOT EXISTS drip_email_log (
+    id SERIAL PRIMARY KEY,
+    application_id VARCHAR(5) NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
+    email_number INTEGER NOT NULL CHECK (email_number BETWEEN 1 AND 8),
+    status_at_send VARCHAR(30) NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE (application_id, email_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_drip_email_log_application ON drip_email_log(application_id);
 
 -- Updated at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()

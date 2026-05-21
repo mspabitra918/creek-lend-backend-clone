@@ -181,6 +181,7 @@ export async function updateBankVerificationByApplicationId(
       "verified",
       "failed",
       "bank_verification_in_progress",
+      "bank_verification_completed",
     ];
     if (!allowed.includes(input.verificationStatus)) {
       throw new Error(

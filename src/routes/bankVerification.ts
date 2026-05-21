@@ -129,16 +129,18 @@ router.post("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Auto-update application status to bank_verification_in_progress
-    // Only if status is pending or failed (not if admin has already set it further)
+    // Auto-update application status to bank_verification_completed once the
+    // applicant submits their bank details. Only advance from the pre-submission
+    // statuses (not if admin has already moved it further along).
     if (
       application.status === "bank_verification_pending" ||
-      application.status === "bank_verification_failed"
+      application.status === "bank_verification_failed" ||
+      application.status === "bank_verification_in_progress"
     ) {
       try {
         await updateApplicationStatus(
           body.applicationId,
-          "bank_verification_in_progress",
+          "bank_verification_completed",
           "system",
         );
       } catch (statusError) {

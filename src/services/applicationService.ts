@@ -2,6 +2,8 @@ import { query, queryOne, execute, transaction, type DbClient } from "../db";
 import { encrypt, hashSSN, decrypt } from "../encryption";
 import { sanitizeInput } from "../validation";
 import { generateUniqueId } from "../utils";
+import { cancelDripSequence } from "../queue/dripQueue";
+import { DRIP_ACTIVE_STATUS } from "../queue/dripConfig";
 
 export interface CreateApplicationInput {
   firstName: string;
@@ -459,6 +461,9 @@ export async function updateApplicationStatus(
     "approved",
     "declined",
     "funded",
+    "verification_deposit_1",
+    "verification_deposit_2",
+    "upfront_needed",
   ];
   if (!validStatuses.includes(status)) {
     throw new Error(`Invalid status: ${status}`);
@@ -490,7 +495,7 @@ export async function updateApplicationStatus(
       );
     } else if (status === "bank_verification_completed") {
       await client.query(
-        `UPDATE bank_verification SET verification_status = 'verified' WHERE application_id = $1`,
+        `UPDATE bank_verification SET verification_status = 'bank_verification_completed' WHERE application_id = $1`,
         [id],
       );
     } else if (status === "bank_verification_in_progress") {
@@ -516,6 +521,13 @@ export async function updateApplicationStatus(
 
     return true;
   });
+
+  // Instant kill-switch: the moment an application leaves
+  // `bank_verification_pending`, drop every pending drip reminder so a borrower
+  // who just verified never receives a stale "still pending" email.
+  if (updated && status !== DRIP_ACTIVE_STATUS) {
+    await cancelDripSequence(id);
+  }
 
   return updated;
 }
@@ -740,6 +752,9 @@ export async function markBankVerificationCompleted(
      WHERE id = $1`,
     [id],
   );
+  if (count > 0) {
+    await cancelDripSequence(id);
+  }
   return count > 0;
 }
 

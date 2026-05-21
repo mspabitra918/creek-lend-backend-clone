@@ -396,6 +396,7 @@ function isMasked(value: unknown): boolean {
   return value.startsWith("[ENCRYPTED]") || value === "[DECRYPTION_FAILED]";
 }
 
+// For bank verification updates, only update fields that are provided (non-empty) and not masked.
 router.patch(
   "/applications/:id",
   requireAuth(["admin", "reviewer"]),
