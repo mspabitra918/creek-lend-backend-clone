@@ -316,6 +316,15 @@ export async function sendStatusUpdateEmail(
     currency: "USD",
   }).format(loanAmount);
 
+  const statusLabel =
+    status === "verification_deposit_1"
+      ? "Verification Deposit in Progress"
+      : status === "verification_deposit_2"
+        ? "Re-Verification Deposit In Progress"
+        : status === "upfront_needed"
+          ? "Waiting for Fee Payment"
+          : status.replace(/_/g, " ").toUpperCase();
+
   const subject =
     config.subject || `${config.title} - ID: ${applicationId} | Creek Lend`;
 
@@ -354,7 +363,9 @@ export async function sendStatusUpdateEmail(
             <tr>
               <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Status</td>
               <td style="padding: 8px 0; font-size: 14px; font-weight: bold; text-align: right;">
-                <span style="background: ${config.color}; color: #ffffff; padding: 4px 12px; border-radius: 12px; font-size: 12px;">${status.replace(/_/g, " ").toUpperCase()}</span>
+                <span style="background: ${config.color}; color: #ffffff; padding: 4px 12px; border-radius: 12px; font-size: 12px;">
+  ${statusLabel}
+</span>
               </td>
             </tr>
           </table>
@@ -363,7 +374,9 @@ export async function sendStatusUpdateEmail(
           You can check your application status at any time using your Application ID <strong>${applicationId}</strong>.
         </p>
         ${
-          ["bank_verification_failed"].includes(status)
+          ["bank_verification_failed", "bank_verification_pending"].includes(
+            status,
+          )
             ? `<div style="text-align: center; margin: 25px 0;">
           <a href="${process.env.FRONTEND_URL}/verify-bank?applicationId=${applicationId}" style="background: #1a56db; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">Verify Bank Account</a>
         </div>`

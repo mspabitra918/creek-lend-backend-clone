@@ -159,10 +159,10 @@ function renderDripEmail(
         <div style="text-align: center; margin: 25px 0;">
           <a href="${verifyUrl}" style="background: ${template.accent}; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">${template.ctaLabel}</a>
         </div>
-        <p style="color: #9ca3af; font-size: 13px; text-align: center;">
-          Or copy this link into your browser:<br />
-          <a href="${verifyUrl}" style="color: #1a56db; word-break: break-all;">${verifyUrl}</a>
-        </p>
+        // <p style="color: #9ca3af; font-size: 13px; text-align: center;">
+        //   Or copy this link into your browser:<br />
+        //   <a href="${verifyUrl}" style="color: #1a56db; word-break: break-all;">${verifyUrl}</a>
+        // </p>
         <p style="color: #374151; font-size: 16px; margin-top: 24px;">
           Best regards,<br />
           The Creek Lend Team
