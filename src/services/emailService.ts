@@ -116,7 +116,7 @@ export async function sendApplicationConfirmationEmail(
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Phone:</strong> <a href="tel:+17472005228" style="color: #1a56db; text-decoration: none;">(747) 206-1606</a>
+            <strong>Phone:</strong> <a href="tel:+17472005228" style="color: #1a56db; text-decoration: none;">(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
             <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
@@ -224,7 +224,7 @@ const statusConfig: Record<
       <p style="color: #374151; font-size: 16px;">The funds are on their way and will be deposited into your registered bank account within the next 24 hours. (Exact availability depends on your bank's standard processing times.)</p>
       <p style="color: #374151; font-size: 16px;">Your official loan agreement and repayment schedule are now available in your secure online portal.</p>
       <p style="color: #374151; font-size: 16px;">If you do not see the funds in your account after 24 hours, please call your dedicated Loan Officer immediately.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Funding Team<br/>Direct Support: (747) 206-1606</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Funding Team<br/>Direct Support: ‪(747) 208-0334</p>
     `,
     color: "#16a34a",
     icon: "&#9989;",
@@ -254,7 +254,7 @@ const statusConfig: Record<
         <p style="color: #92400e; font-size: 14px; margin: 0;"><strong>Please Note:</strong> Your full loan disbursement is temporarily on hold until this verification deposit is safely processed and settled.</p>
       </div>
       <p style="color: #374151; font-size: 16px;">If you have any questions or need help finding a nearby payment location, our support team is standing by to assist you.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: ‪(747) 208-0334</p>
     `,
     color: "#2563eb",
     icon: "&#128176;",
@@ -280,7 +280,7 @@ const statusConfig: Record<
         <p style="color: #991b1b; font-size: 14px; margin: 0;"><strong>Important Notice:</strong> Your loan approval cannot be maintained indefinitely while in a flagged state. Your full loan disbursement remains heavily on hold, and failure to complete this secondary step within 48 hours will result in the automatic expiration of your application.</p>
       </div>
       <p style="color: #374151; font-size: 16px;">If you need help identifying the new deposit or locating a nearby payment node, call our specialized verification line immediately.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: ‪(747) 208-0334</p>
     `,
     color: "#dc2626",
     icon: "&#9888;",
@@ -296,7 +296,7 @@ const statusConfig: Record<
       <p style="color: #374151; font-size: 16px;">Because your primary account is with an online banking institution, our automated system cannot fully verify your financial details. To move your application forward, our underwriting team must perform a manual review. This process involves manually auditing your bank statements, pulling and analyzing your credit report, and drafting the formal approval documentation required to fund your loan.</p>
       <p style="color: #374151; font-size: 16px;">To cover the additional administrative resources required for this manual review, a one-time processing fee of $200.00 is required before we can proceed.</p>
       <p style="color: #374151; font-size: 16px;">If you would like to move forward with this processing method, please call your dedicated Loan Officer at your earliest convenience to arrange the payment and finalize your application.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 206-1606</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: ‪(747) 208-0334</p>
     `,
     color: "#f59e0b",
     icon: "&#128176;",
@@ -385,7 +385,7 @@ export async function sendStatusUpdateEmail(
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">(747) 206-1606</a>
+            <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">‪(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
             <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>

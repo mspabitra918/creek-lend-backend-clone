@@ -57,7 +57,7 @@ const TEMPLATES: Record<number, DripTemplate> = {
     accent: "#1a56db",
     body: [
       "We want to make sure your experience with Creek Lend is as smooth as possible. If you are having trouble connecting your online bank account, our team is here to assist you.",
-      "Please return to your application to try again, or call your dedicated Loan Officer at (747) 206-1606 if you need manual assistance.",
+      "Please return to your application to try again, or call your dedicated Loan Officer at (747) 208-0334 if you need manual assistance.",
     ],
     ctaLabel: "Click Here to Resume Application",
   },
@@ -170,7 +170,7 @@ function renderDripEmail(
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">(747) 206-1606</a>
+            <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">‪(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
             <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
