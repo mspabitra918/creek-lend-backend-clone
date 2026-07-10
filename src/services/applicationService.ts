@@ -30,6 +30,8 @@ export interface CreateApplicationInput {
   bankName: string;
   accountNumber: string;
   routingNumber: string;
+  bankAccountAge: string;
+  bankBalanceStatus: string;
   accountType: string;
   utmSource?: string;
   utmMedium?: string;
@@ -69,6 +71,8 @@ export interface ApplicationRow {
   loan_purpose: string;
   loan_term: number;
   bank_name: string;
+  bank_account_age: string;
+  bank_balance_status: string;
   account_number_encrypted: string;
   routing_number: string;
   account_type: string;
@@ -117,6 +121,8 @@ export interface ApplicationRowExport {
   bank_name: string;
   account_number_encrypted: string;
   routing_number: string;
+  bank_account_age: string;
+  bank_balance_status: string;
   account_type: string;
   utm_source: string;
   utm_medium: string;
@@ -174,7 +180,7 @@ export async function createApplication(
       utm_source, utm_medium, utm_campaign, utm_content,
       assisted_by_loan_agent,
       tcpa_consent, privacy_consent, credit_check_consent,
-      ip_address, user_agent, lead_id, status
+      ip_address, user_agent, lead_id, status , bank_account_age , bank_balance_status
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
       $7, $8, $9, $10,
@@ -185,7 +191,7 @@ export async function createApplication(
       $28, $29, $30, $31,
       $32,
       $33, $34, $35,
-      $36, $37, $38, 'bank_verification_pending'
+      $36, $37, $38, 'bank_verification_pending' , $39, $40
     ) RETURNING id`,
     [
       id,
@@ -226,6 +232,8 @@ export async function createApplication(
       input.ipAddress,
       input.userAgent,
       input.leadId || "",
+      input.bankAccountAge,
+      input.bankBalanceStatus,
     ],
   );
 

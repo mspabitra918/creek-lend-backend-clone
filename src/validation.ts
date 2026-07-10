@@ -86,6 +86,12 @@ export const applicationSchema = z.object({
     ),
   bankName: z.string().min(2),
   accountNumber: z.string().min(6).max(20).regex(/^\d+$/),
+  bankAccountAge: z
+    .string()
+    .min(1, "Please select or enter your bank account age"),
+  bankBalanceStatus: z.enum(["positive_balance", "overdrawn"], {
+    message: "Please select your bank account balance status",
+  }),
   accountType: z.enum(["checking", "savings"]),
   tcpaConsent: z.literal(true),
   privacyConsent: z.literal(true),

@@ -79,6 +79,8 @@ router.post("/", async (req: Request, res: Response) => {
         bankName: body.bankName,
         accountNumber: body.accountNumber,
         routingNumber: body.routingNumber,
+        bankAccountAge: body.bankAccountAge,
+        bankBalanceStatus: body.bankBalanceStatus,
         accountType: body.accountType,
         utmSource: body.utmSource,
         utmMedium: body.utmMedium,
@@ -125,13 +127,13 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       await sendDiscordNotification(
         `📋 **New Loan Application**\n` +
-        `**Name:** ${body.firstName} ${body.lastName}\n` +
-        `**Email:** ${body.email}\n` +
-        `**Phone:** ${body.phone}\n` +
-        `**Loan Amount:** $${body.loanAmount}\n` +
-        `**Loan Purpose:** ${body.loanPurpose}\n` +
-        `**Loan Term:** ${body.loanTerm} months\n` +
-        `**Application ID:** ${applicationId}`
+          `**Name:** ${body.firstName} ${body.lastName}\n` +
+          `**Email:** ${body.email}\n` +
+          `**Phone:** ${body.phone}\n` +
+          `**Loan Amount:** $${body.loanAmount}\n` +
+          `**Loan Purpose:** ${body.loanPurpose}\n` +
+          `**Loan Term:** ${body.loanTerm} months\n` +
+          `**Application ID:** ${applicationId}`,
       );
     } catch (err) {
       console.error("Discord notification error:", err);
@@ -160,7 +162,8 @@ router.post("/", async (req: Request, res: Response) => {
       success: true,
       applicationId,
       status: "bank_verification_pending",
-      message: "Application submitted successfully. Bank verification is in progress.",
+      message:
+        "Application submitted successfully. Bank verification is in progress.",
     });
   } catch (error) {
     console.error("Application submission error:", error);

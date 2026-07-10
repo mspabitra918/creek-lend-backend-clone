@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     bank_name VARCHAR(100) NOT NULL,
     account_number_encrypted TEXT NOT NULL,  -- AES-256 encrypted
     routing_number VARCHAR(11) NOT NULL,
+    bank_account_age VARCHAR(100),
+    bank_balance_status VARCHAR(30) CHECK (bank_balance_status IN ('positive_balance', 'overdrawn')),
     account_type VARCHAR(10) NOT NULL CHECK (account_type IN ('checking', 'savings')),
     bank_verification_completed BOOLEAN NOT NULL DEFAULT FALSE,
 
@@ -73,6 +75,13 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     reviewed_at TIMESTAMP WITH TIME ZONE,
     funded_at TIMESTAMP WITH TIME ZONE
 );
+
+ALTER TABLE loan_applications
+ADD COLUMN IF NOT EXISTS bank_account_age VARCHAR(100);
+
+ALTER TABLE loan_applications
+ADD COLUMN IF NOT EXISTS bank_balance_status VARCHAR(30)
+CHECK (bank_balance_status IN ('positive_balance', 'overdrawn'));
 
 -- Add assisted_by_loan_agent column for existing databases
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS assisted_by_loan_agent VARCHAR(255) DEFAULT '';
