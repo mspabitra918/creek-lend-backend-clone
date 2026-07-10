@@ -579,6 +579,8 @@ export interface UpdateApplicationInput {
   accountNumber?: string;
   routingNumber?: string;
   accountType?: string;
+  bank_account_age?: string;
+  bank_balance_status?: string;
 }
 
 export async function updateApplication(
@@ -611,6 +613,8 @@ export async function updateApplication(
     ["bankName", "bank_name", true],
     ["routingNumber", "routing_number", false],
     ["accountType", "account_type", false],
+    ["bank_account_age", "bank_account_age", false],
+    ["bank_balance_status", "bank_balance_status", false],
   ];
 
   for (const [key, col, sanitize] of stringFields) {
