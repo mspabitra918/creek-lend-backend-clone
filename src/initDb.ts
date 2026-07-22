@@ -5,8 +5,10 @@ import fs from "fs";
 import path from "path";
 
 async function initDatabase() {
-  console.log("Initializing Creek Lend database...");
-  console.log(`Database URL: ${process.env.DATABASE_URL?.replace(/:[^@]+@/, ":****@")}`);
+  console.log("Initializing Brook Loans database...");
+  console.log(
+    `Database URL: ${process.env.DATABASE_URL?.replace(/:[^@]+@/, ":****@")}`,
+  );
 
   try {
     // Read schema file

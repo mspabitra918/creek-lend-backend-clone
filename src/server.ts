@@ -19,10 +19,10 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      "https://www.creeklend.com",
-      "https://creeklend.com",
-      "www.creeklend.com",
-      "creeklend.com",
+      "https://www.brookloans.com",
+      "https://brookloans.com",
+      "www.brookloans.com",
+      "brookloans.com",
       process.env.FRONTEND_URL || "http://localhost:3000",
     ],
     credentials: true,
@@ -70,7 +70,7 @@ app.use(
 // Only listen when running locally (not on Vercel)
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`Creek Lend Backend running on http://localhost:${PORT}`);
+    console.log(`Brook Loans Backend running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   });
 }

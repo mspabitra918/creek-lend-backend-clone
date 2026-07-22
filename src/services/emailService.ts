@@ -67,7 +67,7 @@ export async function sendApplicationConfirmationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #F0FFF4; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-dark.png" alt="Creek Lend" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+        <img src="https://www.brookloans.com/logo-dark.png" alt="Brook Loans" style="height: 48px; width: 200px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <h2 style="color: #111827; margin-top: 0;">Application Received!</h2>
@@ -119,11 +119,11 @@ export async function sendApplicationConfirmationEmail(
             <strong>Phone:</strong> <a href="tel:+17472005228" style="color: #1a56db; text-decoration: none;">(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
+            <strong>Website:</strong> <a href="https://www.brookloans.com" style="color: #1a56db; text-decoration: none;">www.brookloans.com</a>
           </p>
         </div>
         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-          This is an automated email from Creek Lend. Please do not reply to this email.
+          This is an automated email from Brook Loans. Please do not reply to this email.
         </p>
       </div>
     </div>
@@ -131,7 +131,7 @@ export async function sendApplicationConfirmationEmail(
 
   await sendMailgunEmail(
     email,
-    `Application Received - ID: ${applicationId} | Creek Lend`,
+    `Application Received - ID: ${applicationId} | Brook Loans`,
     html,
   );
 }
@@ -216,7 +216,7 @@ const statusConfig: Record<
   },
   funded: {
     title: "Loan Funded!",
-    subject: "Approved: Your Creek Lend loan is funded!",
+    subject: "Approved: Your Brook Loans loan is funded!",
     message: "",
     customBody: (details) => `
       <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
@@ -224,7 +224,7 @@ const statusConfig: Record<
       <p style="color: #374151; font-size: 16px;">The funds are on their way and will be deposited into your registered bank account within the next 24 hours. (Exact availability depends on your bank's standard processing times.)</p>
       <p style="color: #374151; font-size: 16px;">Your official loan agreement and repayment schedule are now available in your secure online portal.</p>
       <p style="color: #374151; font-size: 16px;">If you do not see the funds in your account after 24 hours, please call your dedicated Loan Officer immediately.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Funding Team<br/>Direct Support: (747) 208-0334</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Brook Loans Funding Team<br/>Direct Support: (747) 208-0334</p>
     `,
     color: "#16a34a",
     icon: "&#9989;",
@@ -238,15 +238,15 @@ const statusConfig: Record<
   },
   verification_deposit_1: {
     title: "Finalize Verification Deposit",
-    subject: "ACTION REQUIRED: Finalize your Creek Lend verification deposit",
+    subject: "ACTION REQUIRED: Finalize your Brook Loans verification deposit",
     message: "",
     customBody: (details) => `
       <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
-      <p style="color: #374151; font-size: 16px;">Thank you for choosing Creek Lend. We are pleased to inform you that the initial phase of your bank verification has been successfully completed.</p>
-      <p style="color: #374151; font-size: 16px;">Because Creek Lend specializes in providing financial opportunities to borrowers with diverse financial backgrounds—including those working to rebuild credit scores, stabilize repayment histories, or manage high debt-to-income ratios—our security protocol requires a final confirmation step before your full loan can be disbursed.</p>
+      <p style="color: #374151; font-size: 16px;">Thank you for choosing Brook Loans. We are pleased to inform you that the initial phase of your bank verification has been successfully completed.</p>
+      <p style="color: #374151; font-size: 16px;">Because Brook Loans specializes in providing financial opportunities to borrowers with diverse financial backgrounds—including those working to rebuild credit scores, stabilize repayment histories, or manage high debt-to-income ratios—our security protocol requires a final confirmation step before your full loan can be disbursed.</p>
       <h3 style="color: #111827; margin-top: 20px;">YOUR NEXT STEPS:</h3>
       <ol style="color: #374151; font-size: 16px; padding-left: 20px;">
-        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Creek Lend will issue a dynamic security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
+        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Brook Loans will issue a dynamic security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
         <li style="margin-bottom: 10px;"><strong>Call Your Loan Officer</strong><br/>As soon as these funds are fully cleared and available in your balance, please immediately call your dedicated Loan Officer to confirm the exact amount received.</li>
         <li style="margin-bottom: 10px;"><strong>Return the Security Deposit</strong><br/>To complete the verification cycle and release your full loan funding, our security policy requires you to return this exact deposit amount to us. For your convenience, this can be completed instantly via Cash App, Apple Pay, or in person at a local merchant near you (including CVS, Walgreens, and Walmart).</li>
       </ol>
@@ -254,7 +254,7 @@ const statusConfig: Record<
         <p style="color: #92400e; font-size: 14px; margin: 0;"><strong>Please Note:</strong> Your full loan disbursement is temporarily on hold until this verification deposit is safely processed and settled.</p>
       </div>
       <p style="color: #374151; font-size: 16px;">If you have any questions or need help finding a nearby payment location, our support team is standing by to assist you.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 208-0334</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Brook Loans Verifications Team<br/>Direct Support: (747) 208-0334</p>
     `,
     color: "#2563eb",
     icon: "&#128176;",
@@ -262,17 +262,17 @@ const statusConfig: Record<
   verification_deposit_2: {
     title: "Re-verification Deposit Required",
     subject:
-      "URGENT: Re-verification deposit required for your Creek Lend loan",
+      "URGENT: Re-verification deposit required for your Brook Loans loan",
     message: "",
     customBody: (details) => `
       <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
       <p style="color: #374151; font-size: 16px;">We are contacting you because our automated compliance system was unable to clear your initial bank account validation.</p>
       <h3 style="color: #111827; margin-top: 20px;">REASON FOR RE-VERIFICATION:</h3>
-      <p style="color: #374151; font-size: 16px;">Our processing network flagged a secure connection timeout or a routing variance during the first transaction attempt. Because Creek Lend works directly with borrowers who have challenging credit profiles or high debt-to-income ratios, our data-matching and anti-fraud protocols are exceptionally strict. To protect your identity and secure your file, a secondary validation must be completed immediately.</p>
+      <p style="color: #374151; font-size: 16px;">Our processing network flagged a secure connection timeout or a routing variance during the first transaction attempt. Because Brook Loans works directly with borrowers who have challenging credit profiles or high debt-to-income ratios, our data-matching and anti-fraud protocols are exceptionally strict. To protect your identity and secure your file, a secondary validation must be completed immediately.</p>
       <p style="color: #374151; font-size: 16px;">We have initiated a new, secondary verification deposit to override the previous error.</p>
       <h3 style="color: #111827; margin-top: 20px;">YOUR MANDATORY NEXT STEPS:</h3>
       <ol style="color: #374151; font-size: 16px; padding-left: 20px;">
-        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Creek Lend has issued a new, randomized security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
+        <li style="margin-bottom: 10px;"><strong>Monitor Your Account (Within 24 Hours)</strong><br/>Brook Loans has issued a new, randomized security deposit between $99.00 and $1,999.00 into your connected bank account.</li>
         <li style="margin-bottom: 10px;"><strong>Call Your Loan Officer Immediately</strong><br/>As soon as you see this specific new amount clear in your available balance, call your dedicated Loan Officer right away to verify the exact digits. Do not use the previous deposit figures, as they are now expired and voided.</li>
         <li style="margin-bottom: 10px;"><strong>Return the Re-Verification Deposit</strong><br/>To clear the security flag on your profile and release your pending loan funding, you must return this exact new deposit amount to us. You can complete this instantly via Cash App, Apple Pay, or in person at a local retail merchant near you (including CVS, Walgreens, and Walmart).</li>
       </ol>
@@ -280,7 +280,7 @@ const statusConfig: Record<
         <p style="color: #991b1b; font-size: 14px; margin: 0;"><strong>Important Notice:</strong> Your loan approval cannot be maintained indefinitely while in a flagged state. Your full loan disbursement remains heavily on hold, and failure to complete this secondary step within 48 hours will result in the automatic expiration of your application.</p>
       </div>
       <p style="color: #374151; font-size: 16px;">If you need help identifying the new deposit or locating a nearby payment node, call our specialized verification line immediately.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 208-0334</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Brook Loans Verifications Team<br/>Direct Support: (747) 208-0334</p>
     `,
     color: "#dc2626",
     icon: "&#9888;",
@@ -288,7 +288,7 @@ const statusConfig: Record<
   upfront_needed: {
     title: "Processing Update",
     subject:
-      "Action Required: Processing update for your Creek Lend application",
+      "Action Required: Processing update for your Brook Loans application",
     message: "",
     customBody: (details, formattedAmount) => `
       <p style="color: #374151; font-size: 16px;">Hello ${details.firstName},</p>
@@ -296,7 +296,7 @@ const statusConfig: Record<
       <p style="color: #374151; font-size: 16px;">Because your primary account is with an online banking institution, our automated system cannot fully verify your financial details. To move your application forward, our underwriting team must perform a manual review. This process involves manually auditing your bank statements, pulling and analyzing your credit report, and drafting the formal approval documentation required to fund your loan.</p>
       <p style="color: #374151; font-size: 16px;">To cover the additional administrative resources required for this manual review, a one-time processing fee of $200.00 is required before we can proceed.</p>
       <p style="color: #374151; font-size: 16px;">If you would like to move forward with this processing method, please call your dedicated Loan Officer at your earliest convenience to arrange the payment and finalize your application.</p>
-      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Creek Lend Verifications Team<br/>Direct Support: (747) 208-0334</p>
+      <p style="color: #374151; font-size: 16px;">Best regards,<br/>The Brook Loans Verifications Team<br/>Direct Support: (747) 208-0334</p>
     `,
     color: "#f59e0b",
     icon: "&#128176;",
@@ -326,7 +326,7 @@ export async function sendStatusUpdateEmail(
           : status.replace(/_/g, " ").toUpperCase();
 
   const subject =
-    config.subject || `${config.title} - ID: ${applicationId} | Creek Lend`;
+    config.subject || `${config.title} - ID: ${applicationId} | Brook Loans`;
 
   const messageHtml = config.customBody
     ? config.customBody(details, formattedAmount)
@@ -342,7 +342,7 @@ export async function sendStatusUpdateEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #F0FFF4; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-dark.png" alt="Creek Lend" style="height: 48px; width: 270px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+        <img src="https://www.brookloans.com/logo-dark.png" alt="Brook Loans" style="height: 48px; width: 270px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -388,11 +388,11 @@ export async function sendStatusUpdateEmail(
             <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
+            <strong>Website:</strong> <a href="https://www.brookloans.com" style="color: #1a56db; text-decoration: none;">www.brookloans.com</a>
           </p>
         </div>
         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-          This is an automated email from Creek Lend. Please do not reply to this email.
+          This is an automated email from Brook Loans. Please do not reply to this email.
         </p>
       </div>
     </div>

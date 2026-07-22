@@ -35,14 +35,14 @@ const TEMPLATES: Record<number, DripTemplate> = {
     heading: "Verify your bank account to continue",
     accent: "#1a56db",
     body: [
-      "Thank you for choosing Creek Lend! We have successfully received your loan application.",
+      "Thank you for choosing Brook Loans! We have successfully received your loan application.",
       "To protect your identity and proceed with your application, we need to securely verify your bank account. Please note that your loan details are currently on hold until this step is completed.",
       "Once verified, our underwriting team will review your file to move forward with your funding.",
     ],
     ctaLabel: "Click Here to Verify Your Bank Account",
   },
   2: {
-    subject: "Quick Reminder: Secure your Creek Lend application",
+    subject: "Quick Reminder: Secure your Brook Loans application",
     heading: "Quick reminder",
     accent: "#1a56db",
     body: [
@@ -56,7 +56,7 @@ const TEMPLATES: Record<number, DripTemplate> = {
     heading: "Need a hand linking your bank?",
     accent: "#1a56db",
     body: [
-      "We want to make sure your experience with Creek Lend is as smooth as possible. If you are having trouble connecting your online bank account, our team is here to assist you.",
+      "We want to make sure your experience with Brook Loans is as smooth as possible. If you are having trouble connecting your online bank account, our team is here to assist you.",
       "Please return to your application to try again, or call your dedicated Loan Officer at (747) 208-0334 if you need manual assistance.",
     ],
     ctaLabel: "Click Here to Resume Application",
@@ -66,7 +66,7 @@ const TEMPLATES: Record<number, DripTemplate> = {
     heading: "Your application is still on hold",
     accent: "#f59e0b",
     body: [
-      "Your Creek Lend application is still on hold. To prevent your file from being pushed back in our manual review queue, please complete your secure bank verification now.",
+      "Your Brook Loans application is still on hold. To prevent your file from being pushed back in our manual review queue, please complete your secure bank verification now.",
       "If you have already completed this step, please disregard this message as our system updates.",
     ],
     ctaLabel: "Verify Your Bank Account Here",
@@ -82,7 +82,7 @@ const TEMPLATES: Record<number, DripTemplate> = {
     ctaLabel: "Securely Link Your Bank Account",
   },
   6: {
-    subject: "Good morning! Let's finish your Creek Lend application",
+    subject: "Good morning! Let's finish your Brook Loans application",
     heading: "Good morning!",
     accent: "#f59e0b",
     body: [
@@ -96,13 +96,13 @@ const TEMPLATES: Record<number, DripTemplate> = {
     heading: "We're waiting on you",
     accent: "#f59e0b",
     body: [
-      "Creek Lend specializes in working with unique financial backgrounds to provide the funding you need. However, we cannot offer approvals without a verified banking destination.",
+      "Brook Loans specializes in working with unique financial backgrounds to provide the funding you need. However, we cannot offer approvals without a verified banking destination.",
       "Please take a moment to securely connect your account today so we can review your file.",
     ],
     ctaLabel: "Resume Bank Verification",
   },
   8: {
-    subject: "Final Notice: Your Creek Lend application is expiring",
+    subject: "Final Notice: Your Brook Loans application is expiring",
     heading: "Final notice",
     accent: "#dc2626",
     body: [
@@ -138,7 +138,7 @@ function renderDripEmail(
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: #F0FFF4; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://www.creeklend.com/logo-dark.png" alt="Creek Lend" style="height: 48px; width: 270px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
+        <img src="https://www.brookloans.com/logo-dark.png" alt="Brook Loans" style="height: 48px; width: 270px; display: block; margin: 0 auto 8px;" onerror="this.style.display='none'" />
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
         <h2 style="color: ${template.accent}; margin-top: 0;">${template.heading}</h2>
@@ -165,7 +165,7 @@ function renderDripEmail(
         // </p>
         <p style="color: #374151; font-size: 16px; margin-top: 24px;">
           Best regards,<br />
-          The Creek Lend Team
+          The Brook Loans Team
         </p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="text-align: center; padding: 10px 0;">
@@ -173,11 +173,11 @@ function renderDripEmail(
             <strong>Phone:</strong> <a href="tel:+17472061606" style="color: #1a56db; text-decoration: none;">‪(747) 208-0334</a>
           </p>
           <p style="color: #374151; font-size: 14px; margin: 5px 0;">
-            <strong>Website:</strong> <a href="https://www.creeklend.com" style="color: #1a56db; text-decoration: none;">www.creeklend.com</a>
+            <strong>Website:</strong> <a href="https://www.brookloans.com" style="color: #1a56db; text-decoration: none;">www.brookloans.com</a>
           </p>
         </div>
         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-          This is an automated email from Creek Lend. Please do not reply to this email.
+          This is an automated email from Brook Loans. Please do not reply to this email.
         </p>
       </div>
     </div>

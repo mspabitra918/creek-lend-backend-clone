@@ -1,4 +1,4 @@
--- Creek Lend Database Schema
+-- Brook Loans Database Schema
 -- PostgreSQL
 
 -- Enable extension

@@ -1,38 +1,38 @@
-# Creek Lend - Backend API
+# Brook Loans - Backend API
 
 ## Project Overview
 
-Creek Lend is an online lending platform that allows users to apply for personal loans, submit bank verification details, and track their application status. The backend provides RESTful APIs for loan management, admin dashboard, and third-party integrations.
+Brook Loans is an online lending platform that allows users to apply for personal loans, submit bank verification details, and track their application status. The backend provides RESTful APIs for loan management, admin dashboard, and third-party integrations.
 
 ---
 
 ## Tech Stack
 
-| Layer          | Technology                          |
-| -------------- | ----------------------------------- |
-| **Runtime**    | Node.js                             |
-| **Language**   | TypeScript 5.9                      |
-| **Framework**  | Express.js 5.1                      |
-| **Database**   | PostgreSQL (via `pg` library)        |
-| **Auth**       | JWT (jsonwebtoken) + bcryptjs        |
-| **Validation** | Zod 4.3                             |
-| **Email**      | Mailgun API                          |
-| **Hosting**    | Vercel (Serverless)                  |
+| Layer          | Technology                    |
+| -------------- | ----------------------------- |
+| **Runtime**    | Node.js                       |
+| **Language**   | TypeScript 5.9                |
+| **Framework**  | Express.js 5.1                |
+| **Database**   | PostgreSQL (via `pg` library) |
+| **Auth**       | JWT (jsonwebtoken) + bcryptjs |
+| **Validation** | Zod 4.3                       |
+| **Email**      | Mailgun API                   |
+| **Hosting**    | Vercel (Serverless)           |
 
 ---
 
 ## Frontend Tech Stack
 
-| Layer          | Technology                          |
-| -------------- | ----------------------------------- |
-| **Framework**  | Next.js 16.1                        |
-| **Language**   | TypeScript 5.9                      |
-| **UI Library** | React 19.2                          |
-| **Styling**    | Tailwind CSS 4.2                    |
-| **Maps**       | Google Maps JS API                  |
-| **Toasts**     | react-hot-toast                     |
-| **Validation** | Zod 4.3                             |
-| **Hosting**    | Vercel                              |
+| Layer          | Technology         |
+| -------------- | ------------------ |
+| **Framework**  | Next.js 16.1       |
+| **Language**   | TypeScript 5.9     |
+| **UI Library** | React 19.2         |
+| **Styling**    | Tailwind CSS 4.2   |
+| **Maps**       | Google Maps JS API |
+| **Toasts**     | react-hot-toast    |
+| **Validation** | Zod 4.3            |
+| **Hosting**    | Vercel             |
 
 ---
 
@@ -45,13 +45,13 @@ Creek Lend is an online lending platform that allows users to apply for personal
 
 ### Tables
 
-| Table                | Purpose                                    |
-| -------------------- | ------------------------------------------ |
-| `loan_applications`  | Stores loan application data (encrypted SSN, DL, account numbers) |
-| `bank_verification`  | Encrypted banking credentials vault         |
-| `admin_users`        | Admin authentication & role management      |
-| `audit_log`          | Tracks all status changes                   |
-| `contact_messages`   | Contact form submissions                    |
+| Table               | Purpose                                                           |
+| ------------------- | ----------------------------------------------------------------- |
+| `loan_applications` | Stores loan application data (encrypted SSN, DL, account numbers) |
+| `bank_verification` | Encrypted banking credentials vault                               |
+| `admin_users`       | Admin authentication & role management                            |
+| `audit_log`         | Tracks all status changes                                         |
+| `contact_messages`  | Contact form submissions                                          |
 
 ---
 
@@ -59,27 +59,27 @@ Creek Lend is an online lending platform that allows users to apply for personal
 
 ### Public Routes
 
-| Method | Endpoint                  | Description                        |
-| ------ | ------------------------- | ---------------------------------- |
-| GET    | `/api/health`             | Health check with timestamp        |
-| POST   | `/api/apply`              | Submit a loan application          |
-| POST   | `/api/bank-verification`  | Submit bank verification details   |
+| Method | Endpoint                  | Description                            |
+| ------ | ------------------------- | -------------------------------------- |
+| GET    | `/api/health`             | Health check with timestamp            |
+| POST   | `/api/apply`              | Submit a loan application              |
+| POST   | `/api/bank-verification`  | Submit bank verification details       |
 | GET    | `/api/application-status` | Check application status by ID & email |
-| POST   | `/api/contact`            | Submit contact form (rate limited) |
-| GET    | `/api/geo-check`          | Check user eligibility by country  |
-| GET    | `/api/routing-lookup`     | US routing number / IFSC lookup    |
+| POST   | `/api/contact`            | Submit contact form (rate limited)     |
+| GET    | `/api/geo-check`          | Check user eligibility by country      |
+| GET    | `/api/routing-lookup`     | US routing number / IFSC lookup        |
 
 ### Admin Routes (JWT Protected)
 
-| Method | Endpoint                       | Description                          |
-| ------ | ------------------------------ | ------------------------------------ |
-| POST   | `/api/admin/auth`              | Admin login / bootstrap setup        |
-| GET    | `/api/admin/auth`              | Verify token / get current user      |
-| GET    | `/api/admin/applications`      | List applications (paginated, filterable) |
-| GET    | `/api/admin/applications/:id`  | View single application (with optional decryption) |
-| PATCH  | `/api/admin/applications/:id`  | Update application status            |
-| DELETE | `/api/admin/applications/:id`  | Delete application (admin only)      |
-| GET    | `/api/admin/stats`             | Dashboard statistics                 |
+| Method | Endpoint                      | Description                                        |
+| ------ | ----------------------------- | -------------------------------------------------- |
+| POST   | `/api/admin/auth`             | Admin login / bootstrap setup                      |
+| GET    | `/api/admin/auth`             | Verify token / get current user                    |
+| GET    | `/api/admin/applications`     | List applications (paginated, filterable)          |
+| GET    | `/api/admin/applications/:id` | View single application (with optional decryption) |
+| PATCH  | `/api/admin/applications/:id` | Update application status                          |
+| DELETE | `/api/admin/applications/:id` | Delete application (admin only)                    |
+| GET    | `/api/admin/stats`            | Dashboard statistics                               |
 
 ---
 
@@ -98,13 +98,13 @@ Creek Lend is an online lending platform that allows users to apply for personal
 
 ## Third-Party Integrations
 
-| Service               | Purpose                                      |
-| --------------------- | -------------------------------------------- |
-| **Mailgun**           | Transactional emails (confirmation, status updates) |
-| **Discord Webhooks**  | Real-time notifications for new applications & verifications |
-| **Meta Conversion API** | Lead event tracking (Facebook Pixel)        |
-| **ipapi.co**          | IP-based geolocation for eligibility check   |
-| **Razorpay IFSC API** | Indian bank IFSC code validation             |
+| Service                 | Purpose                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| **Mailgun**             | Transactional emails (confirmation, status updates)          |
+| **Discord Webhooks**    | Real-time notifications for new applications & verifications |
+| **Meta Conversion API** | Lead event tracking (Facebook Pixel)                         |
+| **ipapi.co**            | IP-based geolocation for eligibility check                   |
+| **Razorpay IFSC API**   | Indian bank IFSC code validation                             |
 
 ---
 
@@ -148,23 +148,23 @@ backend/
 
 ### Production
 
-| Package        | Version | Purpose                  |
-| -------------- | ------- | ------------------------ |
-| express        | 5.1.0   | Web framework            |
-| pg             | 8.20.0  | PostgreSQL client        |
-| bcryptjs       | 3.0.3   | Password hashing         |
-| jsonwebtoken   | 9.0.3   | JWT authentication       |
-| zod            | 4.3.6   | Schema validation        |
-| cors           | 2.8.5   | CORS middleware          |
-| dotenv         | 16.5.0  | Environment variables    |
-| axios          | 1.13.6  | HTTP client (webhooks)   |
+| Package      | Version | Purpose                |
+| ------------ | ------- | ---------------------- |
+| express      | 5.1.0   | Web framework          |
+| pg           | 8.20.0  | PostgreSQL client      |
+| bcryptjs     | 3.0.3   | Password hashing       |
+| jsonwebtoken | 9.0.3   | JWT authentication     |
+| zod          | 4.3.6   | Schema validation      |
+| cors         | 2.8.5   | CORS middleware        |
+| dotenv       | 16.5.0  | Environment variables  |
+| axios        | 1.13.6  | HTTP client (webhooks) |
 
 ### Development
 
-| Package    | Version | Purpose                  |
-| ---------- | ------- | ------------------------ |
-| typescript | 5.9.3   | TypeScript compiler      |
-| tsx        | 4.20.0  | TypeScript executor      |
+| Package    | Version | Purpose             |
+| ---------- | ------- | ------------------- |
+| typescript | 5.9.3   | TypeScript compiler |
+| tsx        | 4.20.0  | TypeScript executor |
 
 ---
 
