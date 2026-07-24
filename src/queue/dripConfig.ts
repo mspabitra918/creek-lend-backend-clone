@@ -1,108 +1,142 @@
 /**
- * Bank-verification drip schedule.
+ * Drip email schedule.
  *
- * The sequence only runs while a loan application sits in
- * `bank_verification_pending`. Emails 1-5 fire at fixed offsets from the moment
- * the lead was submitted; emails 6-8 are anchored to 9:00 AM US Eastern on the
- * following calendar days (the "Next Day" overlap guard) so a 6 AM lead never
- * receives the "next day" message on the same calendar day.
+ * Both tracks are anchored to lead submission and start together, but they are
+ * governed differently:
+ *
+ *   "verify" — gated on status `bank_verification_pending`. It only fires while
+ *   the application is still sitting in that status; the moment it moves, the
+ *   pending jobs are dropped (see `cancelDripSequence`) and the worker re-checks
+ *   the live status as a backstop.
+ *     E1  T+0     Application submitted (call us to finalize)
+ *     E2  T+2h    Secure bank verification link
+ *     E3-E7       Verification reminder, every 12h for 3 days
+ *     E8  T+74h   Final cancellation notice
+ *
+ *   "call" — NOT gated on status. The borrower has to call underwriting no
+ *   matter where the file sits, so this track runs to completion regardless of
+ *   status changes.
+ *     E11-E14     Call reminder, every 12h for 2 days
+ *
+ * Email numbers are globally unique across tracks because they are the
+ * idempotency key in `drip_email_log`.
  */
 
 export const DRIP_QUEUE_NAME = "bank-verification-drip";
 
-/** Loan status during which the drip is allowed to run. */
+export type DripTrack = "verify" | "call";
+
+export const DRIP_TRACKS: DripTrack[] = ["verify", "call"];
+
+/**
+ * The loan status during which each track is allowed to run, or `null` for a
+ * track that runs regardless of status.
+ */
+export const DRIP_TRACK_STATUS: Record<DripTrack, string | null> = {
+  verify: "bank_verification_pending",
+  call: null,
+};
+
+/** The status the verification track runs in. */
 export const DRIP_ACTIVE_STATUS = "bank_verification_pending";
 
-const MIN = 60 * 1000;
+export interface DripStep {
+  emailNumber: number;
+  track: DripTrack;
+  /** Offset from the track's anchor instant. */
+  afterMs: number;
+}
 
-export type DripStep =
-  | { emailNumber: number; kind: "relative"; afterMs: number }
-  | {
-      emailNumber: number;
-      kind: "calendar";
-      dayOffset: number;
-      hourET: number;
-    };
+const HOUR = 60 * 60 * 1000;
+
+// const MINUTE = 60 * 1000;
+// const TOTAL_TIME = 5 * MINUTE; // 5 minutes
+// const STEP = Math.floor(TOTAL_TIME / 8); // ~37.5 seconds
 
 /**
- * The 8-email timeline. Relative offsets are cumulative from lead submission:
- *   E1 T+0 · E2 +30m · E3 +60m (T+90m) · E4 +120m (T+3.5h) · E5 +240m (T+7.5h).
- * Emails 6-8 anchor to 9:00 AM US-Eastern on the next calendar mornings;
- * `dayOffset` is counted in US-Eastern calendar days.
+ * Verification track. Offsets are from lead submission. The reminders run on a
+ * 12-hour cadence starting 12h after the verification link (T+2h), and the
+ * cancellation notice lands 3 days after that link.
  */
-export const DRIP_STEPS: DripStep[] = [
-  { emailNumber: 1, kind: "relative", afterMs: 0 },
-  { emailNumber: 2, kind: "relative", afterMs: 30 * MIN },
-  { emailNumber: 3, kind: "relative", afterMs: 90 * MIN },
-  { emailNumber: 4, kind: "relative", afterMs: 210 * MIN },
-  { emailNumber: 5, kind: "relative", afterMs: 450 * MIN },
-  { emailNumber: 6, kind: "calendar", dayOffset: 1, hourET: 9 },
-  { emailNumber: 7, kind: "calendar", dayOffset: 2, hourET: 9 },
-  { emailNumber: 8, kind: "calendar", dayOffset: 3, hourET: 9 },
+export const VERIFY_TRACK_STEPS: DripStep[] = [
+  { emailNumber: 1, track: "verify", afterMs: 0 },
+  { emailNumber: 2, track: "verify", afterMs: 2 * HOUR },
+  { emailNumber: 3, track: "verify", afterMs: 14 * HOUR },
+  { emailNumber: 4, track: "verify", afterMs: 26 * HOUR },
+  { emailNumber: 5, track: "verify", afterMs: 38 * HOUR },
+  { emailNumber: 6, track: "verify", afterMs: 50 * HOUR },
+  { emailNumber: 7, track: "verify", afterMs: 62 * HOUR },
+  { emailNumber: 8, track: "verify", afterMs: 74 * HOUR },
 ];
 
-const EASTERN_TZ = "America/New_York";
+// /**
+//  * Call track. Offsets are from lead submission, same anchor as the verify
+//  * track, and run for 2 days irrespective of the application's status.
+//  */
+export const CALL_TRACK_STEPS: DripStep[] = [
+  { emailNumber: 11, track: "call", afterMs: 12 * HOUR },
+  { emailNumber: 12, track: "call", afterMs: 24 * HOUR },
+  { emailNumber: 13, track: "call", afterMs: 36 * HOUR },
+  { emailNumber: 14, track: "call", afterMs: 48 * HOUR },
+];
 
-/** Milliseconds that the given timezone is offset from UTC at `date` (ET - UTC). */
-function tzOffsetMs(date: Date, timeZone: string): number {
-  // Compare the same instant rendered in the target zone vs. UTC.
-  const inTz = new Date(date.toLocaleString("en-US", { timeZone }));
-  const inUtc = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
-  return inTz.getTime() - inUtc.getTime();
+// export const VERIFY_TRACK_STEPS: DripStep[] = [
+//   { emailNumber: 1, track: "verify", afterMs: 0 }, // 0:00
+//   { emailNumber: 2, track: "verify", afterMs: STEP }, // ~0:37
+//   { emailNumber: 3, track: "verify", afterMs: STEP * 2 }, // ~1:15
+//   { emailNumber: 4, track: "verify", afterMs: STEP * 3 }, // ~1:52
+//   { emailNumber: 5, track: "verify", afterMs: STEP * 4 }, // ~2:30
+//   { emailNumber: 6, track: "verify", afterMs: STEP * 5 }, // ~3:07
+//   { emailNumber: 7, track: "verify", afterMs: STEP * 6 }, // ~3:45
+//   { emailNumber: 8, track: "verify", afterMs: STEP * 7 }, // ~4:22
+// ];
+
+// export const CALL_TRACK_STEPS: DripStep[] = [
+//   { emailNumber: 11, track: "call", afterMs: STEP }, // ~0:37
+//   { emailNumber: 12, track: "call", afterMs: STEP * 2 }, // ~1:15
+//   { emailNumber: 13, track: "call", afterMs: STEP * 3 }, // ~1:52
+//   { emailNumber: 14, track: "call", afterMs: STEP * 4 }, // ~2:30
+// ];
+
+export const DRIP_STEPS: DripStep[] = [
+  ...VERIFY_TRACK_STEPS,
+  ...CALL_TRACK_STEPS,
+];
+
+export function stepsForTrack(track: DripTrack): DripStep[] {
+  return track === "verify" ? VERIFY_TRACK_STEPS : CALL_TRACK_STEPS;
 }
 
-/** The US-Eastern calendar date (year/month/day) of an instant. */
-function easternDateParts(date: Date): {
-  year: number;
-  month: number;
-  day: number;
-} {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: EASTERN_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const [year, month, day] = fmt.format(date).split("-").map(Number);
-  return { year, month, day };
+export function stepForEmailNumber(emailNumber: number): DripStep | undefined {
+  return DRIP_STEPS.find((step) => step.emailNumber === emailNumber);
 }
 
 /**
- * Returns the UTC instant for `hourET:00` US-Eastern on the calendar day that is
- * `dayOffset` days after the Eastern calendar day of `from`.
+ * Whether a track may keep sending while the application sits in `status`.
+ * Ungated tracks (`DRIP_TRACK_STATUS[track] === null`) are always allowed.
  */
-export function easternTimeAt(
-  from: Date,
-  dayOffset: number,
-  hourET: number,
-): Date {
-  const { year, month, day } = easternDateParts(from);
-  // Build the target wall-clock as if it were UTC, then correct by the ET offset.
-  const wallClockAsUtc = Date.UTC(
-    year,
-    month - 1,
-    day + dayOffset,
-    hourET,
-    0,
-    0,
-  );
-  const offset = tzOffsetMs(new Date(wallClockAsUtc), EASTERN_TZ);
-  return new Date(wallClockAsUtc - offset);
+export function isTrackAllowedInStatus(
+  track: DripTrack,
+  status: string,
+): boolean {
+  const requiredStatus = DRIP_TRACK_STATUS[track];
+  return requiredStatus === null || requiredStatus === status;
+}
+
+/** Tracks that must be cancelled because `status` locks them out. */
+export function tracksBlockedByStatus(status: string): DripTrack[] {
+  return DRIP_TRACKS.filter((track) => !isTrackAllowedInStatus(track, status));
 }
 
 /**
- * Delay in milliseconds (from now) before a step should fire, given when the
- * lead was submitted. Never negative — a step whose time has already passed is
+ * Delay in milliseconds (from now) before a step should fire, given the track's
+ * anchor instant. Never negative — a step whose time has already passed is
  * scheduled to run immediately.
  */
 export function delayForStep(
   step: DripStep,
-  submittedAt: Date,
+  anchoredAt: Date,
   now: Date = new Date(),
 ): number {
-  if (step.kind === "relative") {
-    return Math.max(0, submittedAt.getTime() + step.afterMs - now.getTime());
-  }
-  const target = easternTimeAt(submittedAt, step.dayOffset, step.hourET);
-  return Math.max(0, target.getTime() - now.getTime());
+  return Math.max(0, anchoredAt.getTime() + step.afterMs - now.getTime());
 }

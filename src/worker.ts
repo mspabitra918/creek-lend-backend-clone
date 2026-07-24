@@ -2,14 +2,19 @@ import "dotenv/config";
 
 import { Worker, type Job } from "bullmq";
 import { getRedisConnection } from "./queue/connection";
-import { DRIP_QUEUE_NAME, DRIP_ACTIVE_STATUS } from "./queue/dripConfig";
+import {
+  DRIP_QUEUE_NAME,
+  DRIP_TRACK_STATUS,
+  isTrackAllowedInStatus,
+  stepForEmailNumber,
+} from "./queue/dripConfig";
 import type { DripJobData } from "./queue/dripQueue";
 import { getApplicationById } from "./services/applicationService";
 import { sendDripEmail } from "./services/dripEmailService";
 import { recordDripSent, hasDripBeenSent } from "./services/dripLogService";
 
 /**
- * Always-on BullMQ worker for the bank-verification drip sequence.
+ * Always-on BullMQ worker for the drip sequences (verification + call tracks).
  *
  * Deploy this as a separate long-running process (e.g. on the Hostinger VPS):
  *   npm run build && npm run worker
@@ -18,9 +23,9 @@ import { recordDripSent, hasDripBeenSent } from "./services/dripLogService";
  *
  * The two safeguards from the spec are enforced here, not just by job removal:
  *   - Instant kill-switch: every job re-reads the live loan status and refuses
- *     to send unless it is still `bank_verification_pending`.
- *   - Overlap guard: the "next day" delays are computed against the Eastern
- *     calendar in dripConfig, so a 6 AM lead never gets the next-day email today.
+ *     to send unless it still matches the status its track is gated on.
+ *   - Idempotency: `drip_email_log` has a UNIQUE (application_id, email_number)
+ *     constraint, so a retried job can never double-send.
  */
 async function processDripJob(job: Job<DripJobData>): Promise<void> {
   const { applicationId, emailNumber } = job.data;
@@ -31,10 +36,17 @@ async function processDripJob(job: Job<DripJobData>): Promise<void> {
     return;
   }
 
-  // KILL-SWITCH: only send while the application is still awaiting verification.
-  if (application.status !== DRIP_ACTIVE_STATUS) {
+  const step = stepForEmailNumber(emailNumber);
+  if (!step) {
+    console.log(`[drip] no schedule entry for email ${emailNumber} — skipping`);
+    return;
+  }
+
+  // KILL-SWITCH: for a status-gated track, only send while the application is
+  // still in that status. Ungated tracks (the call track) always pass.
+  if (!isTrackAllowedInStatus(step.track, application.status)) {
     console.log(
-      `[drip] application ${applicationId} is now "${application.status}" — skipping email ${emailNumber}`,
+      `[drip] application ${applicationId} is now "${application.status}" (${step.track} track needs "${DRIP_TRACK_STATUS[step.track]}") — skipping email ${emailNumber}`,
     );
     return;
   }

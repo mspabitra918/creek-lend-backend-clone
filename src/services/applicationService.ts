@@ -3,7 +3,19 @@ import { encrypt, hashSSN, decrypt } from "../encryption";
 import { sanitizeInput } from "../validation";
 import { generateUniqueId } from "../utils";
 import { cancelDripSequence } from "../queue/dripQueue";
-import { DRIP_ACTIVE_STATUS } from "../queue/dripConfig";
+import { tracksBlockedByStatus } from "../queue/dripConfig";
+
+/**
+ * Cancels the drip tracks a new status locks out. Only status-gated tracks are
+ * touched — the call track is ungated, so it keeps running wherever the file
+ * ends up. Never throws — drip bookkeeping must not fail a status update.
+ */
+async function syncDripTracksForStatus(
+  id: string,
+  status: string,
+): Promise<void> {
+  await cancelDripSequence(id, tracksBlockedByStatus(status));
+}
 
 export interface CreateApplicationInput {
   firstName: string;
@@ -464,10 +476,14 @@ export async function updateApplicationStatus(
     "deposit_in_progress",
     "bank_verification_completed",
     "bank_verification_failed",
+    "bank_reverification",
+    "request_a_call",
     "pending",
     "reviewing",
     "approved",
     "declined",
+    "declined_pb",
+    "declined_hd",
     "funded",
     "verification_deposit_1",
     "verification_deposit_2",
@@ -481,7 +497,13 @@ export async function updateApplicationStatus(
     const extraFields =
       status === "funded"
         ? ", funded_at = NOW()"
-        : ["reviewing", "approved", "declined"].includes(status)
+        : [
+              "reviewing",
+              "approved",
+              "declined",
+              "declined_pb",
+              "declined_hd",
+            ].includes(status)
           ? ", reviewed_at = NOW()"
           : "";
 
@@ -530,11 +552,12 @@ export async function updateApplicationStatus(
     return true;
   });
 
-  // Instant kill-switch: the moment an application leaves
-  // `bank_verification_pending`, drop every pending drip reminder so a borrower
-  // who just verified never receives a stale "still pending" email.
-  if (updated && status !== DRIP_ACTIVE_STATUS) {
-    await cancelDripSequence(id);
+  // Instant kill-switch: the moment an application leaves a track's status,
+  // drop that track's pending reminders so a borrower who just verified never
+  // receives a stale "still pending" email. Entering
+  // `bank_verification_completed` also starts the "call underwriting" track.
+  if (updated) {
+    await syncDripTracksForStatus(id, status);
   }
 
   return updated;
@@ -765,7 +788,7 @@ export async function markBankVerificationCompleted(
     [id],
   );
   if (count > 0) {
-    await cancelDripSequence(id);
+    await syncDripTracksForStatus(id, "bank_verification_completed");
   }
   return count > 0;
 }

@@ -2,9 +2,11 @@ import { Queue } from "bullmq";
 import { getRedisConnection, isQueueEnabled } from "./connection";
 import {
   DRIP_QUEUE_NAME,
-  DRIP_STEPS,
+  DRIP_TRACKS,
   delayForStep,
+  stepsForTrack,
   type DripStep,
+  type DripTrack,
 } from "./dripConfig";
 
 export interface DripJobData {
@@ -35,67 +37,100 @@ function jobId(applicationId: string, emailNumber: number): string {
 }
 
 /**
- * Schedules all 8 drip emails for a freshly-submitted application. Idempotent:
- * deterministic job ids mean re-enqueueing the same application is a no-op.
- * Never throws — a queue outage must not break loan submission.
+ * Schedules every email in one track, anchored to `anchoredAt`. Idempotent:
+ * deterministic job ids mean re-enqueueing the same track is a no-op while the
+ * jobs still exist. Never throws — a queue outage must not break the caller.
  */
-export async function enqueueDripSequence(
+export async function enqueueDripTrack(
   applicationId: string,
-  submittedAt: Date,
+  track: DripTrack,
+  anchoredAt: Date,
 ): Promise<void> {
   if (!isQueueEnabled()) {
     console.warn(
-      `[drip] REDIS_URL not set — skipping drip enqueue for application ${applicationId}`,
+      `[drip] REDIS_URL not set — skipping ${track} enqueue for application ${applicationId}`,
     );
     return;
   }
+
+  const steps = stepsForTrack(track);
 
   try {
     const q = getDripQueue();
     const now = new Date();
 
     await Promise.all(
-      DRIP_STEPS.map((step: DripStep) =>
+      steps.map((step: DripStep) =>
         q.add(
           `drip-email-${step.emailNumber}`,
           { applicationId, emailNumber: step.emailNumber },
           {
             jobId: jobId(applicationId, step.emailNumber),
-            delay: delayForStep(step, submittedAt, now),
+            delay: delayForStep(step, anchoredAt, now),
           },
         ),
       ),
     );
 
-    console.log(`[drip] Enqueued ${DRIP_STEPS.length} emails for application ${applicationId}`);
+    console.log(
+      `[drip] Enqueued ${steps.length} ${track} emails for application ${applicationId}`,
+    );
   } catch (err) {
-    console.error(`[drip] Failed to enqueue sequence for ${applicationId}:`, err);
+    console.error(
+      `[drip] Failed to enqueue ${track} track for ${applicationId}:`,
+      err,
+    );
   }
 }
 
 /**
- * Instant kill-switch: removes every pending drip job for an application. Called
- * the moment the application leaves `bank_verification_pending` so no further
- * reminders are sent. Never throws.
+ * Starts every drip track for a freshly-submitted application. Both tracks share
+ * the submission anchor: the verify track is dropped as soon as the application
+ * leaves `bank_verification_pending`, while the call track runs to completion
+ * whatever the status becomes.
  */
-export async function cancelDripSequence(applicationId: string): Promise<void> {
+export async function enqueueDripSequence(
+  applicationId: string,
+  submittedAt: Date,
+): Promise<void> {
+  await Promise.all(
+    DRIP_TRACKS.map((track) =>
+      enqueueDripTrack(applicationId, track, submittedAt),
+    ),
+  );
+}
+
+/**
+ * Instant kill-switch: removes pending drip jobs for an application. Called the
+ * moment the application leaves a track's active status so no further reminders
+ * are sent. Defaults to every track. Never throws.
+ */
+export async function cancelDripSequence(
+  applicationId: string,
+  tracks: DripTrack[] = DRIP_TRACKS,
+): Promise<void> {
   if (!isQueueEnabled()) return;
+  if (tracks.length === 0) return;
 
   try {
     const q = getDripQueue();
     await Promise.all(
-      DRIP_STEPS.map(async (step) => {
-        try {
-          // remove() clears delayed/waiting/completed/failed jobs. A job that is
-          // actively running is locked and can't be removed — the worker's own
-          // status re-check is the backstop that prevents it from sending.
-          await q.remove(jobId(applicationId, step.emailNumber));
-        } catch {
-          /* job locked/active or already gone — ignore */
-        }
-      }),
+      tracks.flatMap((track) =>
+        stepsForTrack(track).map(async (step) => {
+          try {
+            // remove() clears delayed/waiting/completed/failed jobs. A job that
+            // is actively running is locked and can't be removed — the worker's
+            // own status re-check is the backstop that prevents it sending.
+            await q.remove(jobId(applicationId, step.emailNumber));
+          } catch {
+            /* job locked/active or already gone — ignore */
+          }
+        }),
+      ),
     );
-    console.log(`[drip] Cancelled drip sequence for application ${applicationId}`);
+    console.log(
+      `[drip] Cancelled ${tracks.join("+")} track(s) for application ${applicationId}`,
+    );
   } catch (err) {
     console.error(`[drip] Failed to cancel sequence for ${applicationId}:`, err);
   }

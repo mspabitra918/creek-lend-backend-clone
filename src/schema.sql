@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     ip_address VARCHAR(45) NOT NULL,
     user_agent TEXT DEFAULT '',
     lead_id VARCHAR(255) DEFAULT '',       -- Jornaya/TrustedForm
-    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'deposit_in_progress', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed')),
+    status VARCHAR(30) NOT NULL DEFAULT 'bank_verification_pending' CHECK (status IN ('bank_verification_pending', 'deposit_in_progress', 'bank_verification_in_progress', 'bank_verification_completed', 'bank_verification_failed', 'bank_reverification', 'request_a_call', 'pending', 'reviewing', 'approved', 'declined', 'declined_pb', 'declined_hd', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed')),
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -89,7 +89,7 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS assisted_by_loan_agent VA
 -- Update status constraint for existing databases (add bank_verification_in_progress)
 ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status_check;
 ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
-    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'pending', 'reviewing', 'approved', 'declined', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed'));
+    CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'bank_reverification', 'request_a_call', 'pending', 'reviewing', 'approved', 'declined', 'declined_pb', 'declined_hd', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed'));
 
 -- Update bank_verification column size and constraint for existing databases
 ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);
@@ -186,17 +186,23 @@ CREATE TABLE IF NOT EXISTS bank_verification (
 CREATE INDEX IF NOT EXISTS idx_bank_verification_application ON bank_verification(application_id);
 CREATE INDEX IF NOT EXISTS idx_bank_verification_status ON bank_verification(verification_status);
 
--- Bank-Verification Drip Email Log
+-- Drip Email Log
 -- One row per drip email actually delivered. Provides idempotency (a job can only
--- send a given email once) and observability for the BullMQ-driven sequence.
+-- send a given email once) and observability for the BullMQ-driven sequences.
+-- Email numbers 1-8 are the bank-verification track; 11-14 are the call track.
 CREATE TABLE IF NOT EXISTS drip_email_log (
     id SERIAL PRIMARY KEY,
     application_id VARCHAR(5) NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
-    email_number INTEGER NOT NULL CHECK (email_number BETWEEN 1 AND 8),
+    email_number INTEGER NOT NULL CHECK (email_number BETWEEN 1 AND 99),
     status_at_send VARCHAR(30) NOT NULL,
     sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE (application_id, email_number)
 );
+
+-- Widen the email_number range for existing databases (the call track uses 11-14)
+ALTER TABLE drip_email_log DROP CONSTRAINT IF EXISTS drip_email_log_email_number_check;
+ALTER TABLE drip_email_log ADD CONSTRAINT drip_email_log_email_number_check
+    CHECK (email_number BETWEEN 1 AND 99);
 
 CREATE INDEX IF NOT EXISTS idx_drip_email_log_application ON drip_email_log(application_id);
 

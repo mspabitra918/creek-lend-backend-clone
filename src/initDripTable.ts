@@ -14,12 +14,20 @@ async function main() {
       CREATE TABLE IF NOT EXISTS drip_email_log (
         id SERIAL PRIMARY KEY,
         application_id VARCHAR(5) NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
-        email_number INTEGER NOT NULL CHECK (email_number BETWEEN 1 AND 8),
+        email_number INTEGER NOT NULL CHECK (email_number BETWEEN 1 AND 99),
         status_at_send VARCHAR(30) NOT NULL,
         sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
         UNIQUE (application_id, email_number)
       );
     `);
+    // Widen the range on databases created before the call track (11-14) existed.
+    await client.query(
+      `ALTER TABLE drip_email_log DROP CONSTRAINT IF EXISTS drip_email_log_email_number_check;`,
+    );
+    await client.query(
+      `ALTER TABLE drip_email_log ADD CONSTRAINT drip_email_log_email_number_check
+         CHECK (email_number BETWEEN 1 AND 99);`,
+    );
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_drip_email_log_application ON drip_email_log(application_id);`,
     );

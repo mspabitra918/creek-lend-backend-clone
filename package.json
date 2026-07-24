@@ -21,6 +21,7 @@
     "ioredis": "^5.10.1",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.3",
     "pg": "^8.20.0",
     "zod": "^4.3.6"
   },
@@ -31,6 +32,7 @@
     "@types/json2csv": "^5.0.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.18.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.3"
