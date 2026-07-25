@@ -51,8 +51,11 @@ app.use("/api/bank-verification", bankVerificationRoutes);
 app.use(sitemapRoutes);
 
 // 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: "Route not found" });
+app.get("/", (_req, res) => {
+  res.json({
+    status: "OK",
+    message: "Brook Loans API is running",
+  });
 });
 
 // Global error handler
