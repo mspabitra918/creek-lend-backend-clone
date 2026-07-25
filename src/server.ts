@@ -16,6 +16,8 @@ import sitemapRoutes from "./routes/sitemap";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
+
 // CORS — allow frontend
 app.use(
   cors({
