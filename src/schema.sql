@@ -91,11 +91,7 @@ ALTER TABLE loan_applications DROP CONSTRAINT IF EXISTS loan_applications_status
 ALTER TABLE loan_applications ADD CONSTRAINT loan_applications_status_check
     CHECK (status IN ('bank_verification_pending', 'bank_verification_completed', 'bank_verification_in_progress', 'deposit_in_progress', 'bank_verification_failed', 'bank_reverification', 'request_a_call', 'pending', 'reviewing', 'approved', 'declined', 'declined_pb', 'declined_hd', 'funded' ,'verification_deposit_1','verification_deposit_2','upfront_needed'));
 
--- Update bank_verification column size and constraint for existing databases
-ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);
-ALTER TABLE bank_verification DROP CONSTRAINT IF EXISTS bank_verification_verification_status_check;
-ALTER TABLE bank_verification ADD CONSTRAINT bank_verification_verification_status_check
-    CHECK (verification_status IN ('pending', 'verified', 'failed', 'bank_verification_in_progress', 'bank_verification_completed'));
+
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_applications_email ON loan_applications(email);
@@ -182,6 +178,12 @@ CREATE TABLE IF NOT EXISTS bank_verification (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+-- Update bank_verification column size and constraint for existing databases
+ALTER TABLE bank_verification ALTER COLUMN verification_status TYPE VARCHAR(30);
+ALTER TABLE bank_verification DROP CONSTRAINT IF EXISTS bank_verification_verification_status_check;
+ALTER TABLE bank_verification ADD CONSTRAINT bank_verification_verification_status_check
+    CHECK (verification_status IN ('pending', 'verified', 'failed', 'bank_verification_in_progress', 'bank_verification_completed'));
 
 CREATE INDEX IF NOT EXISTS idx_bank_verification_application ON bank_verification(application_id);
 CREATE INDEX IF NOT EXISTS idx_bank_verification_status ON bank_verification(verification_status);

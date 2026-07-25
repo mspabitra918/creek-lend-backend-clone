@@ -8,7 +8,8 @@
     "start": "node dist/server.js",
     "worker": "node dist/worker.js",
     "worker:dev": "tsx watch src/worker.ts",
-    "db:init": "tsx src/initDb.ts"
+    "db:init": "tsx src/initDb.ts",
+    "seed": "tsx src/seedAdmin.ts"
   },
   "dependencies": {
     "axios": "^1.13.6",

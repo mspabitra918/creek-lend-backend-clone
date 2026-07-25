@@ -1,27 +1,67 @@
 import "dotenv/config";
-import { createAdminUser, getAdminById, updateAdminPassword } from "./services/adminService";
+import { createAdminUser, updateAdminPassword } from "./services/adminService";
 import { pool } from "./db";
 
-async function seed() {
-  const email = "pabitra@gmail.com";
-  const password = "admin";
-  const name = "Pabitra";
+const admins = [
+  {
+    email: "pabitraghara384@gmail.com",
+    password: "admin",
+    name: "Pabitra",
+    role: "reviewer",
+  },
+  {
+    email: "alex@brookloans.com",
+    password: "Alex_Secure_2024!",
+    name: "Alex",
+    role: "reviewer",
+  },
+  {
+    email: "kevin@brookloans.com",
+    password: "Kevin_Viewer_99#",
+    name: "Kevin",
+    role: "viewer",
+  },
+  {
+    email: "max@brookloans.com",
+    password: "Max_Strong_P@ss_01",
+    name: "Max",
+    role: "reviewer",
+  },
+  {
+    email: "david@brookloans.com",
+    password: "david@ss_01",
+    name: "David",
+    role: "admin",
+  },
+] as const;
 
+async function seed() {
   try {
-    console.log(`Checking if admin ${email} exists...`);
-    // Check if exists
-    const { rows } = await pool.query("SELECT id FROM admin_users WHERE email = $1", [email]);
-    
-    if (rows.length > 0) {
-      console.log("Admin user already exists. Updating password...");
-      await updateAdminPassword(rows[0].id, password);
-      console.log("Admin password updated successfully!");
-    } else {
-      await createAdminUser(email, password, name, "admin");
-      console.log("Admin user created successfully!");
+    for (const admin of admins) {
+      console.log(`Checking ${admin.email}...`);
+
+      const { rows } = await pool.query(
+        "SELECT id FROM admin_users WHERE email = $1",
+        [admin.email],
+      );
+
+      if (rows.length > 0) {
+        await updateAdminPassword(rows[0].id, admin.password);
+        console.log(`✓ Updated password for ${admin.email}`);
+      } else {
+        await createAdminUser(
+          admin.email,
+          admin.password,
+          admin.name,
+          admin.role,
+        );
+        console.log(`✓ Created ${admin.email}`);
+      }
     }
+
+    console.log("\n✅ Admin seeding completed!");
   } catch (error) {
-    console.error("Failed to seed admin:", error);
+    console.error("❌ Failed to seed admins:", error);
   } finally {
     await pool.end();
   }
