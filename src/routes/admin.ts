@@ -29,6 +29,7 @@ import {
   type UpdateBankVerificationInput,
 } from "../services/bankVerificationService";
 import { sendStatusUpdateEmail } from "../services/emailService";
+import { pacificDayRange, todayStr } from "../timezone";
 
 // Format date to MM/DD/YYYY
 function formatDate(date: string | null | undefined): string | null {
@@ -209,8 +210,9 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       // Default to today's date if no date param provided
-      const today = new Date();
-      const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      // const today = new Date();
+      // const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const defaultDate = todayStr();
 
       const options = {
         status: (req.query.status as string) || undefined,
@@ -259,10 +261,10 @@ router.get(
         utm_campaign: app.utm_campaign,
         utm_content: app.utm_content,
         status: app.status,
-        created_at: formatDate(app.created_at),
-        updated_at: formatDate(app.updated_at),
-        reviewed_at: formatDate(app.reviewed_at),
-        funded_at: formatDate(app.funded_at),
+        created_at: app.created_at,
+        updated_at: app.updated_at,
+        reviewed_at: app.reviewed_at,
+        funded_at: app.funded_at,
       }));
 
       res.json({
@@ -303,10 +305,10 @@ router.get(
       const response = {
         ...application,
         date_of_birth: formatDate(application.date_of_birth),
-        created_at: formatDate(application.created_at),
-        updated_at: formatDate(application.updated_at),
-        reviewed_at: formatDate(application.reviewed_at),
-        funded_at: formatDate(application.funded_at),
+        created_at: application.created_at,
+        updated_at: application.updated_at,
+        reviewed_at: application.reviewed_at,
+        funded_at: application.funded_at,
         ssn_encrypted: application?.ssn_decrypted,
         dl_number_encrypted: application?.dl_decrypted,
         account_number_encrypted: application?.account_decrypted,
@@ -329,7 +331,7 @@ router.get(
           bank_name: bankVerification.bank_name,
           account_type: bankVerification.account_type,
           verification_status: bankVerification.verification_status,
-          created_at: formatDate(bankVerification.created_at),
+          created_at: bankVerification.created_at,
         };
       }
 

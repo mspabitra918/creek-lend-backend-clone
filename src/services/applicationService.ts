@@ -4,6 +4,7 @@ import { sanitizeInput } from "../validation";
 import { generateUniqueId } from "../utils";
 import { cancelDripSequence } from "../queue/dripQueue";
 import { tracksBlockedByStatus } from "../queue/dripConfig";
+import { pacificDayRange } from "../timezone";
 
 /**
  * Cancels the drip tracks a new status locks out. Only status-gated tracks are
@@ -326,12 +327,25 @@ export async function listApplications(
   const params: unknown[] = [];
   let paramIndex = 1;
 
+  // if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  //   conditions.push(
+  //     `created_at >= $${paramIndex}::date AND created_at < ($${paramIndex}::date + INTERVAL '1 day')`,
+  //   );
+  //   params.push(date);
+  //   paramIndex++;
+  // }
   if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    conditions.push(
-      `created_at >= $${paramIndex}::date AND created_at < ($${paramIndex}::date + INTERVAL '1 day')`,
-    );
-    params.push(date);
-    paramIndex++;
+    const { dateFrom, dateTo } = pacificDayRange(date);
+
+    if (dateFrom && dateTo) {
+      conditions.push(
+        `created_at >= $${paramIndex} AND created_at <= $${paramIndex + 1}`,
+      );
+
+      params.push(dateFrom);
+      params.push(dateTo);
+      paramIndex += 2;
+    }
   }
   if (status) {
     conditions.push(`status = $${paramIndex++}`);
