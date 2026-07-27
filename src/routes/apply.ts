@@ -13,6 +13,169 @@ import { enqueueDripSequence } from "../queue/dripQueue";
 const router = Router();
 
 // POST /api/apply — Submit loan application
+// router.post("/", async (req: Request, res: Response) => {
+//   try {
+//     const ip =
+//       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+//       req.ip ||
+//       "unknown";
+
+//     // Validate request body
+//     const parsed = applicationSchema.safeParse(req.body);
+//     if (!parsed.success) {
+//       const firstError = parsed.error.issues[0];
+//       res.status(400).json({
+//         error: firstError?.message || "Invalid input",
+//         field: firstError?.path[0],
+//       });
+//       return;
+//     }
+
+//     const body = parsed.data;
+//     const userAgent = (req.headers["user-agent"] as string) || "unknown";
+
+//     // Check for duplicate SSN
+//     try {
+//       const isDuplicate = await checkDuplicateSSN(body.ssn);
+//       if (isDuplicate) {
+//         res.status(409).json({
+//           error:
+//             "An application with this SSN already exists. Please contact support if you need to update your application.",
+//         });
+//         return;
+//       }
+//     } catch (dbError) {
+//       console.warn(
+//         "Database not available, skipping duplicate check:",
+//         dbError,
+//       );
+//     }
+
+//     // Insert into database
+//     let applicationId: string;
+//     try {
+//       const result = await createApplication({
+//         firstName: body.firstName,
+//         lastName: body.lastName,
+//         email: body.email,
+//         phone: body.phone,
+//         dateOfBirth: body.dateOfBirth,
+//         ssn: body.ssn,
+//         driverLicenseNumber: body.driverLicenseNumber,
+//         driverLicenseState: body.driverLicenseState,
+//         streetAddress: body.streetAddress,
+//         city: body.city,
+//         state: body.state,
+//         zipCode: body.zipCode,
+//         country: body.country,
+//         employmentStatus: body.employmentStatus,
+//         employerName: body.employerName,
+//         jobTitle: body.jobTitle,
+//         monthlyIncome: body.monthlyIncome,
+//         yearsEmployed: body.yearsEmployed,
+//         loanAmount: body.loanAmount,
+//         loanPurpose: body.loanPurpose,
+//         loanTerm: body.loanTerm,
+//         bankName: body.bankName,
+//         accountNumber: body.accountNumber,
+//         routingNumber: body.routingNumber,
+//         bankAccountAge: body.bankAccountAge,
+//         bankBalanceStatus: body.bankBalanceStatus,
+//         accountType: body.accountType,
+//         utmSource: body.utmSource,
+//         utmMedium: body.utmMedium,
+//         utmCampaign: body.utmCampaign,
+//         utmContent: body.utmContent,
+//         assistedByLoanAgent: body.assistedByLoanAgent,
+//         tcpaConsent: true,
+//         privacyConsent: true,
+//         creditCheckConsent: true,
+//         ipAddress: ip,
+//         userAgent,
+//         leadId: body.leadId,
+//       });
+//       applicationId = result.id;
+//       res.json({
+//         success: true,
+//         applicationId,
+//         status: "bank_verification_pending",
+//         message:
+//           "Application submitted successfully. Bank verification is in progress.",
+//       });
+//     } catch (dbError) {
+//       console.error("Database insert failed:", dbError);
+//       res
+//         .status(500)
+//         .json({ error: "Failed to process application. Please try again." });
+//       return;
+//     }
+
+//     // Send confirmation email
+//     try {
+//       await sendApplicationConfirmationEmail({
+//         applicationId,
+//         firstName: body.firstName,
+//         lastName: body.lastName,
+//         email: body.email,
+//         loanAmount: body.loanAmount,
+//         loanPurpose: body.loanPurpose,
+//         loanTerm: body.loanTerm,
+//       });
+//     } catch (err) {
+//       console.error("Email send error:", err);
+//     }
+
+//     // Start the bank-verification drip sequence. New applications begin in
+//     // `bank_verification_pending`; enqueueDripSequence never throws so a queue
+//     // outage cannot block submission.
+//     try {
+//       await enqueueDripSequence(applicationId, new Date());
+//     } catch (err) {
+//       console.error("Drip sequence error:", err);
+//     }
+
+//     // Send Discord notification
+//     try {
+//       await sendDiscordNotification(
+//         `📋 **New Loan Application**\n` +
+//           `**Name:** ${body.firstName} ${body.lastName}\n` +
+//           `**Email:** ${body.email}\n` +
+//           `**Phone:** ${body.phone}\n` +
+//           `**Loan Amount:** $${body.loanAmount}\n` +
+//           `**Loan Purpose:** ${body.loanPurpose}\n` +
+//           `**Loan Term:** ${body.loanTerm} months\n` +
+//           `**Application ID:** ${applicationId}`,
+//       );
+//     } catch (err) {
+//       console.error("Discord notification error:", err);
+//     }
+
+//     // Fire Meta CAPI event
+//     try {
+//       await trackLeadEvent({
+//         email: body.email,
+//         phone: body.phone,
+//         firstName: body.firstName,
+//         lastName: body.lastName,
+//         ipAddress: ip,
+//         userAgent,
+//         loanAmount: body.loanAmount,
+//         loanPurpose: body.loanPurpose,
+//         sourceUrl: req.headers.referer || undefined,
+//       });
+//     } catch (err) {
+//       console.error("Meta CAPI error:", err);
+//     }
+
+//     console.log(`Application submitted: ${applicationId}`);
+//   } catch (error) {
+//     console.error("Application submission error:", error);
+//     res
+//       .status(500)
+//       .json({ error: "An internal error occurred. Please try again." });
+//   }
+// });
+
 router.post("/", async (req: Request, res: Response) => {
   try {
     const ip =
@@ -22,27 +185,28 @@ router.post("/", async (req: Request, res: Response) => {
 
     // Validate request body
     const parsed = applicationSchema.safeParse(req.body);
+
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
-      res.status(400).json({
+
+      return res.status(400).json({
         error: firstError?.message || "Invalid input",
         field: firstError?.path[0],
       });
-      return;
     }
 
     const body = parsed.data;
     const userAgent = (req.headers["user-agent"] as string) || "unknown";
 
-    // Check for duplicate SSN
+    // Check duplicate SSN
     try {
       const isDuplicate = await checkDuplicateSSN(body.ssn);
+
       if (isDuplicate) {
-        res.status(409).json({
+        return res.status(409).json({
           error:
             "An application with this SSN already exists. Please contact support if you need to update your application.",
         });
-        return;
       }
     } catch (dbError) {
       console.warn(
@@ -51,8 +215,9 @@ router.post("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Insert into database
+    // Save application
     let applicationId: string;
+
     try {
       const result = await createApplication({
         firstName: body.firstName,
@@ -60,103 +225,63 @@ router.post("/", async (req: Request, res: Response) => {
         email: body.email,
         phone: body.phone,
         dateOfBirth: body.dateOfBirth,
+
         ssn: body.ssn,
         driverLicenseNumber: body.driverLicenseNumber,
         driverLicenseState: body.driverLicenseState,
+
         streetAddress: body.streetAddress,
         city: body.city,
         state: body.state,
         zipCode: body.zipCode,
         country: body.country,
+
         employmentStatus: body.employmentStatus,
         employerName: body.employerName,
         jobTitle: body.jobTitle,
         monthlyIncome: body.monthlyIncome,
         yearsEmployed: body.yearsEmployed,
+
         loanAmount: body.loanAmount,
         loanPurpose: body.loanPurpose,
         loanTerm: body.loanTerm,
+
         bankName: body.bankName,
         accountNumber: body.accountNumber,
         routingNumber: body.routingNumber,
         bankAccountAge: body.bankAccountAge,
         bankBalanceStatus: body.bankBalanceStatus,
         accountType: body.accountType,
+
         utmSource: body.utmSource,
         utmMedium: body.utmMedium,
         utmCampaign: body.utmCampaign,
         utmContent: body.utmContent,
+
         assistedByLoanAgent: body.assistedByLoanAgent,
+
         tcpaConsent: true,
         privacyConsent: true,
         creditCheckConsent: true,
+
         ipAddress: ip,
         userAgent,
+
         leadId: body.leadId,
       });
+
       applicationId = result.id;
     } catch (dbError) {
       console.error("Database insert failed:", dbError);
-      res
-        .status(500)
-        .json({ error: "Failed to process application. Please try again." });
-      return;
-    }
 
-    // Send confirmation email
-    try {
-      await sendApplicationConfirmationEmail({
-        applicationId,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        email: body.email,
-        loanAmount: body.loanAmount,
-        loanPurpose: body.loanPurpose,
-        loanTerm: body.loanTerm,
+      return res.status(500).json({
+        error: "Failed to process application. Please try again.",
       });
-    } catch (err) {
-      console.error("Email send error:", err);
     }
 
-    // Start the bank-verification drip sequence. New applications begin in
-    // `bank_verification_pending`; enqueueDripSequence never throws so a queue
-    // outage cannot block submission.
-    await enqueueDripSequence(applicationId, new Date());
-
-    // Send Discord notification
-    try {
-      await sendDiscordNotification(
-        `📋 **New Loan Application**\n` +
-          `**Name:** ${body.firstName} ${body.lastName}\n` +
-          `**Email:** ${body.email}\n` +
-          `**Phone:** ${body.phone}\n` +
-          `**Loan Amount:** $${body.loanAmount}\n` +
-          `**Loan Purpose:** ${body.loanPurpose}\n` +
-          `**Loan Term:** ${body.loanTerm} months\n` +
-          `**Application ID:** ${applicationId}`,
-      );
-    } catch (err) {
-      console.error("Discord notification error:", err);
-    }
-
-    // Fire Meta CAPI event
-    try {
-      await trackLeadEvent({
-        email: body.email,
-        phone: body.phone,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        ipAddress: ip,
-        userAgent,
-        loanAmount: body.loanAmount,
-        loanPurpose: body.loanPurpose,
-        sourceUrl: req.headers.referer || undefined,
-      });
-    } catch (err) {
-      console.error("Meta CAPI error:", err);
-    }
-
-    console.log(`Application submitted: ${applicationId}`);
+    // ===============================
+    // Return response immediately
+    // ===============================
 
     res.json({
       success: true,
@@ -165,11 +290,67 @@ router.post("/", async (req: Request, res: Response) => {
       message:
         "Application submitted successfully. Bank verification is in progress.",
     });
+
+    // ===============================
+    // Background tasks
+    // ===============================
+
+    // Confirmation Email
+    sendApplicationConfirmationEmail({
+      applicationId,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      email: body.email,
+      loanAmount: body.loanAmount,
+      loanPurpose: body.loanPurpose,
+      loanTerm: body.loanTerm,
+    }).catch((err) => {
+      console.error("Email send error:", err);
+    });
+
+    // Bank verification drip sequence
+    enqueueDripSequence(applicationId, new Date()).catch((err) => {
+      console.error("Drip sequence error:", err);
+    });
+
+    // Discord notification
+    sendDiscordNotification(
+      `📋 **New Loan Application**
+**Name:** ${body.firstName} ${body.lastName}
+**Email:** ${body.email}
+**Phone:** ${body.phone}
+**Loan Amount:** $${body.loanAmount}
+**Loan Purpose:** ${body.loanPurpose}
+**Loan Term:** ${body.loanTerm} months
+**Application ID:** ${applicationId}`,
+    ).catch((err) => {
+      console.error("Discord notification error:", err);
+    });
+
+    // Meta CAPI event
+    trackLeadEvent({
+      email: body.email,
+      phone: body.phone,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      ipAddress: ip,
+      userAgent,
+      loanAmount: body.loanAmount,
+      loanPurpose: body.loanPurpose,
+      sourceUrl: req.headers.referer || undefined,
+    }).catch((err) => {
+      console.error("Meta CAPI error:", err);
+    });
+
+    console.log(`Application submitted: ${applicationId}`);
   } catch (error) {
     console.error("Application submission error:", error);
-    res
-      .status(500)
-      .json({ error: "An internal error occurred. Please try again." });
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "An internal error occurred. Please try again.",
+      });
+    }
   }
 });
 
