@@ -285,7 +285,7 @@ router.get(
 // GET /api/admin/applications/:id — View single application
 router.get(
   "/applications/:id",
-  requireAuth(["admin", "reviewer"]),
+  requireAuth(["admin", "reviewer", "viewer"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const id = req.params.id as string;
