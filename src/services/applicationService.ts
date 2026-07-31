@@ -15,6 +15,7 @@ async function syncDripTracksForStatus(
   id: string,
   status: string,
 ): Promise<void> {
+  console.log("Blocked tracks:", status, tracksBlockedByStatus(status));
   await cancelDripSequence(id, tracksBlockedByStatus(status));
 }
 

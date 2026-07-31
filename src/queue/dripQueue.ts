@@ -128,10 +128,14 @@ export async function cancelDripSequence(
         }),
       ),
     );
+    console.log("Cancelling tracks:", tracks);
     console.log(
       `[drip] Cancelled ${tracks.join("+")} track(s) for application ${applicationId}`,
     );
   } catch (err) {
-    console.error(`[drip] Failed to cancel sequence for ${applicationId}:`, err);
+    console.error(
+      `[drip] Failed to cancel sequence for ${applicationId}:`,
+      err,
+    );
   }
 }

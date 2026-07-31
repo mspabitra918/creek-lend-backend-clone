@@ -32,9 +32,9 @@ export const DRIP_TRACKS: DripTrack[] = ["verify", "call"];
  * The loan status during which each track is allowed to run, or `null` for a
  * track that runs regardless of status.
  */
-export const DRIP_TRACK_STATUS: Record<DripTrack, string | null> = {
+export const DRIP_TRACK_STATUS: Record<DripTrack, string> = {
   verify: "bank_verification_pending",
-  call: null,
+  call: "bank_verification_pending",
 };
 
 /** The status the verification track runs in. */
