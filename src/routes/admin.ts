@@ -405,9 +405,49 @@ router.patch(
   async (req: AuthRequest, res: Response) => {
     try {
       const id = req.params.id as string;
-      const { status, bankVerification, ...rest } = req.body ?? {};
+      const {
+        status,
+        bankVerification,
+        ssn_decrypted,
+        dl_decrypted,
+        account_decrypted,
+        ...rest
+      } = req.body ?? {};
 
       const updates: UpdateApplicationInput = {};
+
+      // 1. Explicitly map incoming decrypted values to backend input keys
+      if (typeof ssn_decrypted === "string" && !isMasked(ssn_decrypted)) {
+        updates.ssn = ssn_decrypted;
+      }
+      if (typeof dl_decrypted === "string" && !isMasked(dl_decrypted)) {
+        updates.driverLicenseNumber = dl_decrypted;
+      }
+      if (
+        typeof account_decrypted === "string" &&
+        !isMasked(account_decrypted)
+      ) {
+        updates.accountNumber = account_decrypted;
+      }
+
+      // 2. Process all remaining fields using APP_FIELD_MAP
+      // for (const [snakeKey, camelKey] of Object.entries(APP_FIELD_MAP)) {
+      //   const raw = rest[snakeKey];
+      //   if (raw === undefined || raw === null || raw === "") continue;
+      //   if (isMasked(raw)) continue;
+
+      //   if (NUMBER_FIELDS.has(camelKey)) {
+      //     const n = typeof raw === "number" ? raw : Number(raw);
+      //     if (!Number.isNaN(n)) {
+      //       (updates as Record<string, unknown>)[camelKey] = n;
+      //     }
+      //   } else if (typeof raw === "string") {
+      //     const v = camelKey === "dateOfBirth" ? normalizeDate(raw) : raw;
+      //     (updates as Record<string, unknown>)[camelKey] = v;
+      //   }
+      // }
+
+      // 2. Process all remaining fields using APP_FIELD_MAP
       for (const [snakeKey, camelKey] of Object.entries(APP_FIELD_MAP)) {
         const raw = rest[snakeKey];
         if (raw === undefined || raw === null || raw === "") continue;

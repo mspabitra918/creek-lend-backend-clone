@@ -4,6 +4,17 @@
 -- Enable extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+CREATE OR REPLACE FUNCTION set_pdt_timestamps()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW(); -- Store standard UTC
+    IF (TG_OP = 'INSERT') THEN
+        NEW.created_at = NOW(); -- Store standard UTC
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Loan Applications Table
 CREATE TABLE IF NOT EXISTS loan_applications (
     id VARCHAR(5) PRIMARY KEY,
