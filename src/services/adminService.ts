@@ -23,6 +23,7 @@ export interface JWTPayload {
   role: string;
   iat?: number;
   exp?: number;
+  sessionId: string;
 }
 
 export async function createAdminUser(
@@ -56,18 +57,33 @@ export async function authenticateAdmin(
   if (!user) return null;
 
   if (!user.is_active) {
-    return { user: null as any, token: null as any, error: "Account is deactivated" };
+    return {
+      user: null as any,
+      token: null as any,
+      error: "Account is deactivated",
+    };
   }
 
   const validPassword = await bcrypt.compare(password, user.password_hash);
   if (!validPassword) return null;
 
-  await execute("UPDATE admin_users SET last_login = NOW() WHERE id = $1", [
-    user.id,
-  ]);
+  // 1. Naya Unique Session ID generate karo
+  const newSessionId = crypto.randomUUID();
 
+  // 2. ✅ FIX: Database mein current_session_id KO UPDATE KARO
+  await execute(
+    "UPDATE admin_users SET last_login = NOW(), current_session_id = $1 WHERE id = $2",
+    [newSessionId, user.id],
+  );
+
+  // 3. JWT Token me naya sessionId bhej do
   const token = jwt.sign(
-    { userId: user.id, email: user.email, role: user.role } as JWTPayload,
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      sessionId: newSessionId,
+    } as JWTPayload,
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN },
   );
@@ -78,18 +94,19 @@ export async function authenticateAdmin(
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
-  } catch {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    return decoded;
+  } catch (error) {
     return null;
   }
 }
 
-export async function getAdminById(id: string): Promise<AdminUser | null> {
-  return queryOne<AdminUser>(
-    `SELECT id, email, name, role, is_active, last_login, created_at
-     FROM admin_users WHERE id = $1`,
-    [id],
-  );
+export async function getAdminById(id: string) {
+  const user = await queryOne<
+    AdminUser & { current_session_id: string; is_active: boolean }
+  >("SELECT * FROM admin_users WHERE id = $1", [id]); // Make sure SELECT * or current_session_id is fetched
+
+  return user;
 }
 
 export async function getAdminByEmail(
@@ -132,7 +149,9 @@ export async function listAdminUsersPaginated(
 
   if (search) {
     params.push(`%${search}%`);
-    whereClauses.push(`(email ILIKE $${params.length} OR name ILIKE $${params.length})`);
+    whereClauses.push(
+      `(email ILIKE $${params.length} OR name ILIKE $${params.length})`,
+    );
   }
 
   if (role) {

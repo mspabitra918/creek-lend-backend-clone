@@ -26,14 +26,29 @@ export function requireAuth(requiredRoles?: string[]) {
       return;
     }
 
-    // Verify user still exists and is active
     const user = await getAdminById(payload.userId);
     if (!user || !user.is_active) {
       res.status(403).json({ error: "Account is deactivated" });
       return;
     }
 
-    // Check role if required
+    // 🔍 DEBUG LOGS: Server terminal me print honge
+    console.log("=== SESSION VERIFICATION DEBUG ===");
+    console.log("DB Session ID :", user.current_session_id);
+    console.log("JWT Session ID:", payload.sessionId);
+    console.log("==================================");
+
+    if (
+      !user.current_session_id ||
+      user.current_session_id !== payload.sessionId
+    ) {
+      res.status(401).json({
+        error:
+          "Logged out because your account was accessed from another device.",
+      });
+      return;
+    }
+
     if (requiredRoles && !requiredRoles.includes(payload.role)) {
       res.status(403).json({ error: "Insufficient permissions" });
       return;
@@ -45,15 +60,12 @@ export function requireAuth(requiredRoles?: string[]) {
 }
 
 // In-memory rate limiter
-const rateLimitMap = new Map<
-  string,
-  { count: number; resetTime: number }
->();
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 export function rateLimit(
   identifier: string,
   maxRequests: number = 10,
-  windowMs: number = 60000
+  windowMs: number = 60000,
 ): { allowed: boolean; remaining: number; resetIn: number } {
   // Bypass rate limiting in development
   if (process.env.NODE_ENV === "development") {

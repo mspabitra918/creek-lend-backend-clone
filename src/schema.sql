@@ -144,6 +144,8 @@ INSERT INTO admin_users (id, email, password_hash, name, role)
 VALUES ('10001', 'pabitra@gmail.com', '$2b$12$iWF5/Ig7Oa1XbDkrZS8PaekSCvNss5roKtp9dz3Mav65a2La7iHV.', 'Pabitra', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
+ALTER TABLE admin_users ADD COLUMN current_session_id VARCHAR(255) NULL;
+
 -- Contact Messages Table
 CREATE TABLE IF NOT EXISTS contact_messages (
     id VARCHAR(5) PRIMARY KEY,
