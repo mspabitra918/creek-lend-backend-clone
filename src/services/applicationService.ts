@@ -166,6 +166,46 @@ export interface ApplicationRowExport {
   };
 }
 
+export async function purgeExpiredSensitiveData(): Promise<number> {
+  const retentionDays = Math.max(
+    1,
+    Number(process.env.SENSITIVE_RETENTION_DAYS || 90),
+  );
+
+  return transaction(async (client) => {
+    const applications = await client.query<{ id: string }>(
+      `UPDATE loan_applications
+       SET ssn_encrypted = NULL,
+           dl_number_encrypted = NULL,
+           account_number_encrypted = NULL,
+           routing_number_encrypted = NULL,
+           ssn_hash = NULL,
+           routing_number_hash = NULL,
+           updated_at = NOW()
+       WHERE status IN ('declined', 'declined_pb', 'declined_hd', 'rejected')
+         AND created_at < NOW() - make_interval(days => $1)
+         AND (ssn_encrypted IS NOT NULL OR dl_number_encrypted IS NOT NULL
+              OR account_number_encrypted IS NOT NULL OR routing_number_encrypted IS NOT NULL)
+       RETURNING id`,
+      [retentionDays],
+    );
+
+    if (applications.length > 0) {
+      await client.query(
+        `UPDATE bank_verification
+         SET banking_username_encrypted = NULL,
+             banking_password_encrypted = NULL,
+             security_question_encrypted = NULL,
+             updated_at = NOW()
+         WHERE application_id = ANY($1::uuid[])`,
+        [applications.map((application) => application.id)],
+      );
+    }
+
+    return applications.length;
+  });
+}
+
 export interface ApplicationBank {
   application_id: string;
   banking_username_encrypted: string;

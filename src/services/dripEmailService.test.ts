@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { sendDripEmail } from "./dripEmailService";
 import { setEmailSender } from "./emailService";
 import {
-  CALL_TRACK_STEPS,
   DRIP_STEPS,
   VERIFY_TRACK_STEPS,
   delayForStep,
@@ -93,16 +92,6 @@ async function main() {
       );
     }
 
-    // Every scheduled step must have a template behind it.
-    for (const step of DRIP_STEPS) {
-      await sendDripEmail(step.emailNumber, {
-        applicationId: "12345",
-        firstName: "Jane",
-        email: "jane@example.com",
-        loanAmount: 2500,
-      });
-    }
-
     await assert.rejects(
       sendDripEmail(99, {
         applicationId: "12345",
@@ -116,58 +105,62 @@ async function main() {
     setEmailSender();
   }
 
-  // Production schedule: verify spans submission → 3-day cancellation, call
-  // spans 2 days from the same anchor. dripConfig.ts can be switched to a
-  // compressed schedule for end-to-end testing, in which case skip the exact
-  // offsets and only assert the shape both schedules must share.
-  const isProductionSchedule = VERIFY_TRACK_STEPS[1].afterMs === 2 * HOUR;
+  // Production schedule: reminders at 6h/24h/48h, cancellation at 72h.
+  // dripConfig.ts can be switched to a compressed schedule for end-to-end
+  // testing, in which case skip the exact offsets and only assert the shape.
+  const isProductionSchedule = VERIFY_TRACK_STEPS[0].afterMs === 6 * HOUR;
   if (isProductionSchedule) {
     assert.deepEqual(
       VERIFY_TRACK_STEPS.map((s) => s.afterMs / HOUR),
-      [0, 2, 14, 26, 38, 50, 62, 74],
-    );
-    assert.deepEqual(
-      CALL_TRACK_STEPS.map((s) => s.afterMs / HOUR),
-      [12, 24, 36, 48],
+      [6, 24, 48, 72],
     );
   } else {
     console.log(
       "! compressed drip schedule active — exact offsets not checked",
     );
-    assert.equal(VERIFY_TRACK_STEPS.length, 8);
-    assert.equal(CALL_TRACK_STEPS.length, 4);
+  }
+  assert.equal(VERIFY_TRACK_STEPS.length, 4);
+  assert.deepEqual(
+    VERIFY_TRACK_STEPS.map((s) => s.emailNumber),
+    [21, 22, 23, 24],
+  );
+  assert.deepEqual(
+    VERIFY_TRACK_STEPS.map((s) => s.templateNumber),
+    [1, 2, 3, 4],
+  );
+
+  // Only the final cancellation notice declines the application.
+  assert.deepEqual(
+    VERIFY_TRACK_STEPS.filter((s) => s.declinesApplication).map(
+      (s) => s.emailNumber,
+    ),
+    [24],
+  );
+
+  // The track runs forward from its anchor.
+  for (let i = 1; i < VERIFY_TRACK_STEPS.length; i++) {
+    assert.ok(
+      VERIFY_TRACK_STEPS[i].afterMs > VERIFY_TRACK_STEPS[i - 1].afterMs,
+      `step ${VERIFY_TRACK_STEPS[i].emailNumber} must fire after ${VERIFY_TRACK_STEPS[i - 1].emailNumber}`,
+    );
   }
 
-  // Either way, both tracks run forward from their anchor.
-  for (const steps of [VERIFY_TRACK_STEPS, CALL_TRACK_STEPS]) {
-    for (let i = 1; i < steps.length; i++) {
-      assert.ok(
-        steps[i].afterMs > steps[i - 1].afterMs,
-        `step ${steps[i].emailNumber} must fire after ${steps[i - 1].emailNumber}`,
-      );
-    }
-  }
-
-  // Email numbers are the idempotency key — they must not collide across tracks.
+  // Email numbers are the idempotency key — they must be unique.
   assert.equal(
     new Set(DRIP_STEPS.map((s) => s.emailNumber)).size,
     DRIP_STEPS.length,
   );
 
-  // The verify track is status-gated; the call track runs whatever the status.
+  // The verify track is status-gated.
   assert.equal(
     isTrackAllowedInStatus("verify", "bank_verification_pending"),
     true,
   );
   assert.equal(isTrackAllowedInStatus("verify", "funded"), false);
-  assert.equal(
-    isTrackAllowedInStatus("call", "bank_verification_pending"),
-    true,
-  );
-  assert.equal(isTrackAllowedInStatus("call", "declined"), true);
   assert.deepEqual(tracksBlockedByStatus("bank_verification_pending"), []);
   assert.deepEqual(tracksBlockedByStatus("funded"), ["verify"]);
-  assert.equal(stepForEmailNumber(11)?.track, "call");
+  assert.equal(stepForEmailNumber(24)?.track, "verify");
+  assert.equal(stepForEmailNumber(11), undefined);
   assert.equal(stepForEmailNumber(99), undefined);
 
   // Delays are relative to the anchor and never negative.
@@ -175,13 +168,13 @@ async function main() {
   assert.equal(
     delayForStep(VERIFY_TRACK_STEPS[1], anchor, anchor),
     VERIFY_TRACK_STEPS[1].afterMs,
-    "E2 fires its configured offset after submission",
+    "E22 fires its configured offset after submission",
   );
   assert.equal(
     delayForStep(
       VERIFY_TRACK_STEPS[1],
       anchor,
-      new Date(anchor.getTime() + 5 * HOUR),
+      new Date(anchor.getTime() + 25 * HOUR),
     ),
     0,
     "a step whose time has passed fires immediately",

